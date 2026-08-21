@@ -1,13 +1,3 @@
 {
-  "itemGroup.villagerdeed": "Example Mod Tab",
-  "block.villagerdeed.example_block": "Example Block",
-  "item.villagerdeed.example_item": "Example Item",
-
-  "villagerdeed.configuration.title": "Villager Deed Configs",
-  "villagerdeed.configuration.section.villagerdeed.common.toml": "Villager Deed Configs",
-  "villagerdeed.configuration.section.villagerdeed.common.toml.title": "Villager Deed Configs",
-  "villagerdeed.configuration.items": "Item List",
-  "villagerdeed.configuration.logDirtBlock": "Log Dirt Block",
-  "villagerdeed.configuration.magicNumberIntroduction": "Magic Number Text",
-  "villagerdeed.configuration.magicNumber": "Magic Number"
+  "block.villagerdeed.namje_villagerdeed": "Villager Deed"
 }
