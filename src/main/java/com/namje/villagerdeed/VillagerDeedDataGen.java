@@ -3,6 +3,7 @@ package com.namje.villagerdeed;
 import com.namje.villagerdeed.datagen.ModBlockLootTableProvider;
 import com.namje.villagerdeed.datagen.ModBlockTagsProvider;
 import com.namje.villagerdeed.datagen.ModModelProvider;
+import com.namje.villagerdeed.datagen.ModRecipeProvider;
 import net.minecraft.data.DataGenerator;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.loot.LootTableProvider;
@@ -27,5 +28,6 @@ public class VillagerDeedDataGen {
         gen.addProvider(true, new LootTableProvider(packOutput, Collections.emptySet(),
                 List.of(new LootTableProvider.SubProviderEntry(ModBlockLootTableProvider::new,
                 LootContextParamSets.BLOCK)), lookupProvider));
+        gen.addProvider(true, new ModRecipeProvider.Runner(packOutput, lookupProvider));
     }
 }
