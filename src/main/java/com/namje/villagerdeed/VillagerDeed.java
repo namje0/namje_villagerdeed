@@ -1,6 +1,7 @@
 package com.namje.villagerdeed;
 
 import com.namje.villagerdeed.block.ModBlocks;
+import com.namje.villagerdeed.block.entity.ModBlockEntities;
 import com.namje.villagerdeed.item.ModItems;
 import org.slf4j.Logger;
 
@@ -57,6 +58,8 @@ public class VillagerDeed {
 
         ModItems.ITEMS.register(modEventBus);
         ModBlocks.BLOCKS.register(modEventBus);
+
+        ModBlockEntities.BLOCK_ENTITES.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(this);
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us

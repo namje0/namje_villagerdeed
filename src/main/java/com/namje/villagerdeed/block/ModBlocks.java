@@ -1,6 +1,7 @@
 package com.namje.villagerdeed.block;
 
 import com.namje.villagerdeed.VillagerDeed;
+import com.namje.villagerdeed.block.custom.VillagerDeedBlock;
 import com.namje.villagerdeed.item.ModItems;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.level.block.Block;
@@ -15,7 +16,7 @@ import java.util.function.Function;
 public class ModBlocks {
     public static final DeferredRegister.Blocks BLOCKS = DeferredRegister.createBlocks(VillagerDeed.MODID);
     public static final DeferredBlock<Block> VILLAGERDEED_BLOCK = registerBlock("namje_villagerdeed",
-            properties -> new Block(properties.sound(SoundType.WOOD)));
+            properties -> new VillagerDeedBlock(properties.sound(SoundType.WOOD).strength(2f)));
 
     private static <T extends Block> void registerBlockItem(String name, DeferredBlock<T> block) {
         ModItems.ITEMS.registerItem(name, properties -> new BlockItem(block.get(),
