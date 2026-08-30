@@ -4,10 +4,12 @@ import com.mojang.serialization.MapCodec;
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -50,9 +52,14 @@ public class VillagerDeedBlock extends BaseEntityBlock {
                                           BlockPos pos, Player player, InteractionHand hand,
                                           BlockHitResult hitResult) {
         if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity villagerDeedBlockEntity) {
+            player.openMenu(new SimpleMenuProvider(villagerDeedBlockEntity,
+                    Component.translatable("block.villagerdeed.namje_villagerdeed")), pos);
+
+            /*
             VillagerDeed.LOGGER.info("USED VILLAGER DEED");
             level.playSound(player, pos, SoundEvents.GLOW_ITEM_FRAME_ADD_ITEM,
                     SoundSource.BLOCKS, 1f, 1f);
+             */
         }
         return InteractionResult.SUCCESS;
     };
