@@ -1,11 +1,13 @@
 package com.namje.villagerdeed.menu.custom;
 
+import com.namje.villagerdeed.block.ModBlocks;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
 import com.namje.villagerdeed.menu.ModMenuTypes;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -34,6 +36,7 @@ public class VillagerDeedMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return false;
+        return stillValid(ContainerLevelAccess.create(level, blockEntity.getBlockPos()),
+                player, ModBlocks.VILLAGERDEED_BLOCK.get());
     }
 }

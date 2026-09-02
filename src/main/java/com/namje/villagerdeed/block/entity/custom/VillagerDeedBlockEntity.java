@@ -13,6 +13,7 @@ import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
@@ -22,10 +23,38 @@ import net.minecraft.world.level.storage.ValueOutput;
 import javax.annotation.Nullable;
 
 public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider {
+    private static final int MAX_MOVE_IN_TIME = 60;
+    private int moveInTime = 0;
+    private String roomName = "Room";
+    private String villagerName = "";
+    private int villagerId = 0; // nothing now, if we want diff villager models this might be good for tracking?
 
+
+    private final ContainerData data;
 
     public VillagerDeedBlockEntity(BlockPos worldPosition, BlockState blockState) {
         super(ModBlockEntities.VILLAGERDEED_BE.get(), worldPosition, blockState);
+        this.data = new ContainerData() {
+            @Override
+            public int get(int dataId) {
+                return switch (dataId) {
+                    case 0 -> VillagerDeedBlockEntity.this.moveInTime;
+                    default -> 0;
+                };
+            }
+
+            @Override
+            public void set(int dataId, int value) {
+                switch (dataId) {
+                    case 0: VillagerDeedBlockEntity.this.moveInTime = value;
+                }
+            }
+
+            @Override
+            public int getCount() {
+                return 1;
+            }
+        };
     }
 
     @Override
