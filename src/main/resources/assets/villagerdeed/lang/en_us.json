@@ -1,6 +1,6 @@
 {
   "block.villagerdeed.namje_villagerdeed": "Villager Deed",
-  "block.villagerdeed.namje_villagerdeed.no_bed": "No bed detected; Place the deed by the head of a bed",
+  "block.villagerdeed.namje_villagerdeed.no_bed": "Place the deed by the head of a bed to activate it",
   "block.villagerdeed.namje_villagerdeed.occupied": "This bed already has a villager deed attached to it",
   "block.villagerdeed.namje_villagerdeed.waiting": "Waiting for a villager to move in"
 }

@@ -2,6 +2,7 @@ package com.namje.villagerdeed.block.custom;
 
 import com.mojang.serialization.MapCodec;
 import com.namje.villagerdeed.VillagerDeed;
+import com.namje.villagerdeed.block.entity.ModBlockEntities;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -21,7 +22,7 @@ import net.minecraft.world.level.ScheduledTickAccess;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.Block;
-import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.*;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BedPart;
@@ -52,6 +53,14 @@ public class VillagerDeedBlock extends BaseEntityBlock {
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
         return new VillagerDeedBlockEntity(blockPos, blockState);
+    }
+
+    @Nullable
+    @Override
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
+        return level.isClientSide()
+                ? null
+                : createTickerHelper(blockEntityType, ModBlockEntities.VILLAGERDEED_BE.get(), VillagerDeedBlockEntity::serverTick);
     }
 
     private static boolean hasAdjacentBedHead(LevelReader level, BlockPos pos) {
@@ -99,7 +108,8 @@ public class VillagerDeedBlock extends BaseEntityBlock {
 
     @Override
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, ItemStack stack, boolean willHarvest, FluidState fluid) {
-        if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity) {
+        if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedEntity) {
+            deedEntity.onCleanup(level);
             VillagerDeed.LOGGER.info("DESTROYED VILLAGER DEED");
         }
         return super.onDestroyedByPlayer(state, level, pos, player, stack, willHarvest, fluid);
