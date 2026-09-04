@@ -33,17 +33,18 @@ import org.jspecify.annotations.Nullable;
 
 public class VillagerDeedBlock extends BaseEntityBlock {
     public static final MapCodec<VillagerDeedBlock> CODEC = simpleCodec(VillagerDeedBlock::new);
-    public static final BooleanProperty ACTIVE = BooleanProperty.create("active");
 
     public VillagerDeedBlock(Properties properties) {
         super(properties);
-        this.registerDefaultState(this.defaultBlockState().setValue(ACTIVE, false));
+        //this.registerDefaultState(this.defaultBlockState().setValue(ACTIVE, false));
     }
 
+    /*
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(ACTIVE);
     }
+     */
 
     @Override
     protected MapCodec<? extends BaseEntityBlock> codec() {
@@ -63,30 +64,55 @@ public class VillagerDeedBlock extends BaseEntityBlock {
                 : createTickerHelper(blockEntityType, ModBlockEntities.VILLAGERDEED_BE.get(), VillagerDeedBlockEntity::serverTick);
     }
 
-    private static boolean hasAdjacentBedHead(LevelReader level, BlockPos pos) {
+    @Nullable
+    public static BlockPos findAdjacentBedHead(LevelReader level, BlockPos pos) {
         for (Direction dir : Direction.Plane.HORIZONTAL) {
             BlockPos neighborPos = pos.relative(dir);
             BlockState neighborState = level.getBlockState(neighborPos);
+
             if (neighborState.getBlock() instanceof BedBlock && neighborState.hasProperty(BedBlock.PART)) {
-                if (neighborState.getValue(BedBlock.PART) == BedPart.HEAD) {
-                    return true;
+                BedPart part = neighborState.getValue(BedBlock.PART);
+                if (part == BedPart.HEAD) {
+                    return neighborPos;
+                } else if (part == BedPart.FOOT && neighborState.hasProperty(BedBlock.FACING)) {
+                    Direction facing = neighborState.getValue(BedBlock.FACING);
+                    BlockPos headPos = neighborPos.relative(facing);
+                    BlockState headState = level.getBlockState(headPos);
+                    if (headState.getBlock() instanceof BedBlock
+                            && headState.hasProperty(BedBlock.PART)
+                            && headState.getValue(BedBlock.PART) == BedPart.HEAD) {
+                        return headPos;
+                    }
                 }
             }
         }
-        return false;
+        return null;
     }
 
+    /*
     @Override
     public BlockState getStateForPlacement(BlockPlaceContext context) {
         boolean hasBed = hasAdjacentBedHead(context.getLevel(), context.getClickedPos());
         return this.defaultBlockState().setValue(ACTIVE, hasBed);
     }
+     */
+
+    @Override
+    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
+        super.onPlace(state, level, pos, oldState, isMoving);
+        if (!level.isClientSide()) {
+            if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedEntity) {
+                deedEntity.updateBedPresence(findAdjacentBedHead(level, pos));
+            }
+        }
+    }
 
     @Override
     protected BlockState updateShape(BlockState state, LevelReader levelReader, ScheduledTickAccess ticks, BlockPos pos, Direction directionToNeighbour, BlockPos neighbourPos, BlockState neighbourState, RandomSource random) {
-        boolean hasBed = hasAdjacentBedHead(levelReader, pos);
-        if (state.getValue(ACTIVE) != hasBed) {
-            return state.setValue(ACTIVE, hasBed);
+        if (levelReader instanceof Level level && !level.isClientSide()) {
+            if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedEntity) {
+                deedEntity.updateBedPresence(findAdjacentBedHead(level, pos));
+            }
         }
         return super.updateShape(state, levelReader, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
     }
@@ -95,26 +121,34 @@ public class VillagerDeedBlock extends BaseEntityBlock {
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
         if (!level.isClientSide()) {
             if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity villagerDeedBlockEntity) {
-                if (state.getValue(ACTIVE)) {
+                if (villagerDeedBlockEntity.getDeedState() == 2) {
                     player.openMenu(new SimpleMenuProvider(villagerDeedBlockEntity,
                             Component.translatable("block.villagerdeed.namje_villagerdeed")), pos);
                 } else {
-                    player.sendOverlayMessage(Component.translatable("block.villagerdeed.namje_villagerdeed.no_bed"));
+                    String message = switch (villagerDeedBlockEntity.getDeedState()) {
+                        case 0 -> "no_bed";
+                        case 1 -> "waiting";
+                        case 3 -> "respawning";
+                        default -> "invalid";
+                    };
+                    player.sendOverlayMessage(Component.translatable("block.villagerdeed.namje_villagerdeed." + message));
                 }
             }
         }
         return InteractionResult.SUCCESS;
     }
 
+    /*
     @Override
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, ItemStack stack, boolean willHarvest, FluidState fluid) {
         if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedEntity) {
             deedEntity.onCleanup(level);
-            VillagerDeed.LOGGER.info("DESTROYED VILLAGER DEED");
         }
         return super.onDestroyedByPlayer(state, level, pos, player, stack, willHarvest, fluid);
     }
+     */
 
+    /*
     @Override
     protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel level, BlockPos pos, boolean movedByPiston) {
         for (Direction direction : Direction.Plane.HORIZONTAL) {
@@ -127,4 +161,5 @@ public class VillagerDeedBlock extends BaseEntityBlock {
         }
         super.affectNeighborsAfterRemoval(state, level, pos, movedByPiston);
     }
+     */
 }
