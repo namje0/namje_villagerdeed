@@ -25,4 +25,9 @@ public class VillagerDeedScreen extends AbstractContainerScreen<VillagerDeedMenu
         graphics.blit(RenderPipelines.GUI_TEXTURED, GUI_TEXTURE, x, y, 0, 0, imageWidth,
                 imageHeight, 256, 256);
     }
+
+    @Override
+    protected void extractLabels(GuiGraphicsExtractor graphics, int xm, int ym) {
+        graphics.text(this.font, this.title, this.titleLabelX, this.titleLabelY, -12566464, false);
+    }
 }

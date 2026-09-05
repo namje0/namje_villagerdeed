@@ -1,7 +1,19 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
       "model": "villagerdeed:block/namje_villagerdeed"
+    },
+    "facing=east": {
+      "model": "villagerdeed:block/namje_villagerdeed",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "villagerdeed:block/namje_villagerdeed",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "villagerdeed:block/namje_villagerdeed",
+      "y": 270
     }
   }
 }

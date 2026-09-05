@@ -1,6 +1,12 @@
 {
-  "parent": "minecraft:block/cube_all",
+  "parent": "minecraft:block/cube",
   "textures": {
-    "all": "villagerdeed:block/namje_villagerdeed"
+    "north": "villagerdeed:block/namje_villagerdeed_north",
+    "south": "villagerdeed:block/namje_villagerdeed_south",
+    "east": "villagerdeed:block/namje_villagerdeed_east",
+    "west": "villagerdeed:block/namje_villagerdeed_west",
+    "up": "villagerdeed:block/namje_villagerdeed_up",
+    "down": "villagerdeed:block/namje_villagerdeed_down",
+    "particle": "villagerdeed:block/namje_villagerdeed_east"
   }
 }
