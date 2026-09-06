@@ -3,11 +3,13 @@
   "group": "villagerdeed",
   "key": {
     "A": "#minecraft:planks",
-    "B": "minecraft:gold_ingot"
+    "B": "minecraft:book",
+    "C": "minecraft:emerald"
   },
   "pattern": [
+    "AAA",
     "ABA",
-    "AAA"
+    "ACA"
   ],
   "result": {
     "id": "villagerdeed:namje_villagerdeed"

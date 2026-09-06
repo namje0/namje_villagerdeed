@@ -36,11 +36,13 @@ public class ModRecipeProvider extends RecipeProvider {
     @Override
     protected void buildRecipes() {
         shaped(RecipeCategory.DECORATIONS, ModBlocks.VILLAGERDEED_BLOCK.get())
-                .pattern("ABA")
                 .pattern("AAA")
+                .pattern("ABA")
+                .pattern("ACA")
                 .define('A', tag(ItemTags.PLANKS))
-                .define('B', Items.GOLD_INGOT)
-                .unlockedBy(getHasName(Items.GOLD_INGOT), has(Items.GOLD_INGOT))
+                .define('B', Items.BOOK)
+                .define('C', Items.EMERALD)
+                .unlockedBy(getHasName(Items.EMERALD), has(Items.EMERALD))
                 .group("villagerdeed")
                 .save(output, "villagerdeed:villagerdeed");
     }
