@@ -32,8 +32,10 @@ public class VillagerDeedClient {
         VillagerDeed.LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
     }
 
+    /*
     @SubscribeEvent
     public static void registerScreens(RegisterMenuScreensEvent event) {
         event.register(ModMenuTypes.VILLAGER_MENU.get(), VillagerDeedScreen::new);
     }
+     */
 }

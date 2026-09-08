@@ -1,8 +1,19 @@
 {
   "block.villagerdeed.namje_villagerdeed": "Villager Deed",
-  "block.villagerdeed.namje_villagerdeed.invalid": "This deed is invalid",
-  "block.villagerdeed.namje_villagerdeed.no_bed": "Place the deed by the head of a bed to activate it",
   "block.villagerdeed.namje_villagerdeed.occupied": "This bed already has a villager deed attached to it",
-  "block.villagerdeed.namje_villagerdeed.waiting": "Waiting for a villager to move in",
-  "block.villagerdeed.namje_villagerdeed.respawning": "Villager is currently respawning"
+
+  "gui.villagerdeed.state.invalid": "This deed is invalid",
+  "gui.villagerdeed.state.no_bed": "Place the deed by the head of a bed to activate it",
+  "gui.villagerdeed.state.waiting": "Waiting for a villager to move in",
+  "gui.villagerdeed.state.respawning": "Villager is currently respawning",
+
+  "gui.villagerdeed.button.evict": "Evict Tenant",
+  "gui.villagerdeed.button.toggle_active": "Toggle Deed Availability",
+  "gui.villagerdeed.button.summon": "Summon Tenant",
+  "gui.villagerdeed.button.shuffle": "Shuffle Trades",
+  "gui.villagerdeed.button.confirm_deed": "Confirm Deed Name",
+  "gui.villagerdeed.button.confirm_tenant": "Confirm Tenant Name",
+
+  "gui.villagerdeed.button.range": "Range Limit",
+  "gui.villagerdeed.button.profession": "Profession"
 }

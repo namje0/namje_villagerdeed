@@ -3,6 +3,8 @@ package com.namje.villagerdeed.block.custom;
 import com.mojang.serialization.MapCodec;
 import com.namje.villagerdeed.block.entity.ModBlockEntities;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
+import com.namje.villagerdeed.menu.custom.VillagerDeedScreen;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -119,21 +121,11 @@ public class VillagerDeedBlock extends BaseEntityBlock {
 
     @Override
     protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (!level.isClientSide()) {
+        if (level.isClientSide()) {
             if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity villagerDeedBlockEntity) {
-                if (villagerDeedBlockEntity.getDeedState() == 2) {
-                    player.openMenu(new SimpleMenuProvider(villagerDeedBlockEntity,
-                            Component.translatable("block.villagerdeed.namje_villagerdeed")), pos);
-                } else {
-                    String message = switch (villagerDeedBlockEntity.getDeedState()) {
-                        case 0 -> "no_bed";
-                        case 1 -> "waiting";
-                        case 3 -> "respawning";
-                        default -> "invalid";
-                    };
-                    player.sendOverlayMessage(Component.translatable("block.villagerdeed.namje_villagerdeed." + message));
-                }
+                Minecraft.getInstance().setScreenAndShow(new VillagerDeedScreen(Component.translatable("block.villagerdeed.namje_villagerdeed"), villagerDeedBlockEntity));
             }
+            return InteractionResult.SUCCESS;
         }
         return InteractionResult.SUCCESS;
     }
