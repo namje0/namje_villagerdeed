@@ -3,9 +3,8 @@ package com.namje.villagerdeed.block.entity.custom;
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.ModBlockEntities;
 import com.namje.villagerdeed.menu.custom.VillagerDeedMenu;
-import net.minecraft.core.BlockPos;
-import net.minecraft.core.Holder;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.*;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
@@ -17,6 +16,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.entity.player.Inventory;
@@ -24,19 +26,38 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
 import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
 public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider {
+    private static final List<String> TENANT_NAMES = List.of(
+            "Ramon", "Cedric", "Hunter", "Richard", "Clemence", "Ollie", "Fennel", "Percy",
+            "Beatrice", "Camille", "Jasmine", "Eleanor", "Minerva", "Ignis", "Elena", "Laura",
+            "Bonnabelle", "Meazar", "Jordell", "Daejon", "Sofia", "Charmvir", "Jeff", "Isabelle",
+            "Poppy", "Freya", "Julia", "Claudia", "Clementine", "Ngoc", "Miyabi", "Billy",
+            "Mina", "Alice", "Zhao", "Soup", "Kazu", "Reimu", "Jane", "Bea",
+            "Willow", "Dora", "Olivia", "Tom", "Clyde", "Bonnie", "Coach", "Ellis",
+            "Rachael", "Nick", "Vivian", "Maddie", "Sydney", "Claude", "Olive", "Doc",
+            "Amelia", "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael",
+            "Linda", "William", "Elizabeth", "David", "Barbara", "Susan", "Joseph", "Jessica",
+            "Thomas", "Sarah", "Charles", "Karen", "Stanford", "Stanley", "Mabel", "Dipper",
+            "Carmen", "Angela", "Roland", "Gebura", "Hod", "Elijah", "Garion", "Xiao",
+            "Yuuri", "Chito", "Irina", "Rin", "Nadeshiko", "Mono", "Tich", "Soos",
+            "Wendy", "Diana", "Kinzo", "Saya", "Madotsuki", "Kai", "TESTIFICATE"
+    );
+
     public static final int MAX_MOVE_IN_TIME = 120;
     public static final double MAX_LEASH_DISTANCE = 16.0;
     public static final double HARD_TELEPORT_DISTANCE = 32.0;
@@ -47,18 +68,20 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
     1 = inactive, bound to a bed but no tenant bound
     2 = active, bed and tenant bound
     3 = waiting, tenant is dead/otherwise missing and waiting to respawn
+    4 = deed set to unavailable by player
      */
     private int deedState = 0;
 
     private int moveInTime = 0;
     private String deedName = "Room";
-    private String tenantName = "test john";
+    private String tenantName = "Villager";
     private double leashDistance = MAX_LEASH_DISTANCE;
 
+    private @Nullable UUID ownerUUID;
     private @Nullable BlockPos bedPos;
     private @Nullable EntityReference<LivingEntity> tenant;
     private @Nullable CompoundTag tenantData;
-    private ResourceKey<VillagerProfession> tenantProfession = VillagerProfession.ARMORER;
+    private ResourceKey<VillagerProfession> tenantProfession = VillagerProfession.NONE;
     private final ContainerData data;
 
     public VillagerDeedBlockEntity(BlockPos worldPosition, BlockState blockState) {
@@ -89,15 +112,34 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         };
     }
 
-    public int getDeedState() {
-        return this.deedState;
-    }
-
     public String getDeedName() { return this.deedName; }
     public void setDeedName(String name) { this.deedName = name; }
     public String getTenantName() { return this.tenantName; }
-    public void setTenantName(String name) { this.tenantName = name; }
+    public void setTenantName(String name) {
+        this.tenantName = name;
+        if (this.level instanceof ServerLevel serverLevel) {
+            Villager activeTenant = this.getTenantEntity(serverLevel);
+            if (activeTenant != null) {
+                if (name.isEmpty()) {
+                    activeTenant.setCustomName(null);
+                } else {
+                    activeTenant.setCustomName(Component.literal(name));
+                }
+                this.snapshotTenantData(activeTenant);
+            }
+        }
+        this.setChanged();
+    }
 
+    public @Nullable UUID getOwnerUUID() { return this.ownerUUID; }
+    public void setOwnerUUID(@Nullable UUID uuid) {
+        this.ownerUUID = uuid;
+        this.setChanged();
+    }
+
+    public int getDeedState() {
+        return this.deedState;
+    }
     public void setDeedState(int state) {
         if (this.deedState != state) {
             this.deedState = state;
@@ -105,8 +147,42 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         }
     }
 
+    public void toggleDeedAvailability() {
+        if (this.deedState != 4) {
+            setDeedState(4);
+        } else {
+            setDeedState(0);
+            this.updateBedPresence(this.findAdjacentBedHead(level, this.getBlockPos()));
+        }
+    }
+
     public @Nullable BlockPos getBedPos() {
         return this.bedPos;
+    }
+
+    @Nullable
+    public BlockPos findAdjacentBedHead(LevelReader level, BlockPos pos) {
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            BlockPos neighborPos = pos.relative(dir);
+            BlockState neighborState = level.getBlockState(neighborPos);
+
+            if (neighborState.getBlock() instanceof BedBlock && neighborState.hasProperty(BedBlock.PART)) {
+                BedPart part = neighborState.getValue(BedBlock.PART);
+                if (part == BedPart.HEAD) {
+                    return neighborPos;
+                } else if (part == BedPart.FOOT && neighborState.hasProperty(BedBlock.FACING)) {
+                    Direction facing = neighborState.getValue(BedBlock.FACING);
+                    BlockPos headPos = neighborPos.relative(facing);
+                    BlockState headState = level.getBlockState(headPos);
+                    if (headState.getBlock() instanceof BedBlock
+                            && headState.hasProperty(BedBlock.PART)
+                            && headState.getValue(BedBlock.PART) == BedPart.HEAD) {
+                        return headPos;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     public void updateBedPresence(@Nullable BlockPos foundBedPos) {
@@ -155,7 +231,7 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
             return;
         }
 
-        if (entity.deedState == 0) {
+        if (entity.deedState == 0 || entity.deedState == 4) {
             return;
         }
 
@@ -181,12 +257,13 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
                 entity.setDeedState(2);
             }
 
-            entity.moveInTime = 0;
-            String currentName = activeTenant.getDisplayName().getString();
-            if (!Objects.equals(entity.tenantName, currentName)) {
-                entity.tenantName = currentName;
+            String currentDisplayName = activeTenant.getDisplayName().getString();
+            if (!entity.tenantName.equals(currentDisplayName)) {
+                entity.setTenantName(currentDisplayName);
                 entity.setChanged();
             }
+
+            entity.moveInTime = 0;
 
             entity.restrictTenant(activeTenant, pos);
 
@@ -197,11 +274,6 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
             int targetState = (entity.tenantData != null || entity.tenant != null) ? 3 : 1;
             if (entity.deedState != targetState) {
                 entity.setDeedState(targetState);
-            }
-
-            if (!entity.tenantName.isEmpty()) {
-                entity.tenantName = "";
-                entity.setChanged();
             }
 
             entity.moveInTime++;
@@ -216,6 +288,8 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
 
     // ranch tenants to a radius around the deed so we don't have to deal with unloaded tenants and loaded deeds if possible
     private void restrictTenant(Villager tenant, BlockPos deedPos) {
+        if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
+
         double distSqr = tenant.distanceToSqr(deedPos.getX() + 0.5,
                 deedPos.getY(), deedPos.getZ() + 0.5);
 
@@ -229,10 +303,45 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         if (distSqr > MAX_LEASH_DISTANCE * MAX_LEASH_DISTANCE) {
             if (tenant.getNavigation().isDone()) {
                 VillagerDeed.LOGGER.info("attempting to navigate tenant to deed");
-                tenant.getNavigation().moveTo(deedPos.getX() + 0.5,
-                        deedPos.getY() + 1.0, deedPos.getZ() + 0.5, 1);
+                //tenant.getNavigation().moveTo(deedPos.getX() + 0.5,
+                //        deedPos.getY() + 1.0, deedPos.getZ() + 0.5, 1);
+
+                Brain<Villager> brain = tenant.getBrain();
+                brain.stopAll(serverLevel, tenant);
+
+                brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+                brain.eraseMemory(MemoryModuleType.PATH);
+                brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
+                brain.eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+                brain.eraseMemory(MemoryModuleType.BREED_TARGET);
+                brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+
+                WalkTarget walkTarget = new WalkTarget(deedPos, 0.6f, 6);
+                brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
             }
         }
+    }
+
+    public void summonTenant(Villager tenant, BlockPos deedPos) {
+        if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
+        //TODO: if spam button enough teleport(?)
+
+        VillagerDeed.LOGGER.info("summoning tenant to deed");
+        //tenant.getNavigation().moveTo(deedPos.getX() + 0.5,
+        //        deedPos.getY() + 1.0, deedPos.getZ() + 0.5, 1);
+
+        Brain<Villager> brain = tenant.getBrain();
+        brain.stopAll(serverLevel, tenant);
+
+        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+        brain.eraseMemory(MemoryModuleType.PATH);
+        brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
+        brain.eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+        brain.eraseMemory(MemoryModuleType.BREED_TARGET);
+        brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+
+        WalkTarget walkTarget = new WalkTarget(deedPos, 1f, 3);
+        brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
     }
 
     private void snapshotTenantData(Villager tenant) {
@@ -280,27 +389,54 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
                 ValueInput input = TagValueInput.create(reporter, level.registryAccess(), this.tenantData);
                 tenant.load(input);
                 VillagerDeed.LOGGER.info("existing tenant data detected: attempting to load data");
+
+                //display msg to block owner if they exist
+                Player owner = this.getOwnerPlayer(level);
+                if (owner != null) {
+                    owner.sendSystemMessage(Component.translatable("block.villagerdeed.namje_villagerdeed.respawned", this.tenantName, this.deedName));
+                }
+            }
+        } else {
+            this.tenantName = TENANT_NAMES.get(level.getRandom().nextInt(TENANT_NAMES.size()));
+
+            //display msg to block owner if they exist
+            Player owner = this.getOwnerPlayer(level);
+            if (owner != null) {
+                owner.sendSystemMessage(Component.translatable("block.villagerdeed.namje_villagerdeed.moved_in", this.tenantName, this.deedName));
+            }
+
+            List<VillagerProfession> professions = getProfessions();
+            if (!professions.isEmpty()) {
+                VillagerProfession randomProfession = professions.get(level.getRandom().nextInt(professions.size()));
+                this.tenantProfession = BuiltInRegistries.VILLAGER_PROFESSION
+                        .getResourceKey(randomProfession)
+                        .orElse(VillagerProfession.NONE);
             }
         }
 
         applyProfession(tenant, level);
+        if (this.tenantName != null && !this.tenantName.isEmpty()) {
+            tenant.setCustomName(Component.literal(this.tenantName));
+        }
         tenant.setUUID(UUID.randomUUID());
         tenant.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0F, 0.0F);
         tenant.setHealth(tenant.getMaxHealth());
 
         if (level.addFreshEntity(tenant)) {
             this.tenant = EntityReference.of(tenant);
-            this.tenantName = tenant.getDisplayName().getString();
 
             snapshotTenantData(tenant);
 
             level.sendBlockUpdated(pos, getBlockState(), getBlockState(), 3);
             VillagerDeed.LOGGER.info("tenant created/restored and bound to deed");
+
             return true;
         }
 
         return false;
     }
+
+    public @Nullable Player getOwnerPlayer(Level level) { return this.ownerUUID != null ? level.getPlayerByUUID(this.ownerUUID) : null; }
 
     @Nullable
     public Villager getTenantEntity(Level level) {
@@ -322,6 +458,19 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         }
     }
 
+    public void evictTenant(Level level) {
+        if (level instanceof ServerLevel serverLevel) {
+            cleanupTenant(serverLevel);
+            this.tenant = null;
+            this.tenantData = null;
+            this.tenantName = "";
+            this.tenantProfession = VillagerProfession.NONE;
+            this.moveInTime = 0;
+            setDeedState(1);
+            markUpdated();
+        }
+    }
+
     public void onCleanup(Level level) {
         if (level instanceof ServerLevel serverLevel) {
             cleanupTenant(level);
@@ -334,6 +483,14 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
                 this.bedPos = null;
             }
         }
+    }
+
+    private static List<VillagerProfession> getProfessions() {
+        return BuiltInRegistries.VILLAGER_PROFESSION.stream()
+                .filter(profession -> BuiltInRegistries.VILLAGER_PROFESSION.getResourceKey(profession)
+                        .map(key -> !key.equals(VillagerProfession.NONE))
+                        .orElse(true))
+                .toList();
     }
 
     @Override
@@ -352,6 +509,10 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         if (this.tenantData != null) {
             output.store("TenantData", CompoundTag.CODEC, this.tenantData);
         }
+
+        if (this.ownerUUID != null) {
+            output.store("OwnerUUID", UUIDUtil.CODEC, this.ownerUUID);
+        }
     }
 
     @Override
@@ -364,6 +525,7 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         this.tenant = EntityReference.read(input, "BoundTenant");
         this.bedPos = input.read("BedPos", BlockPos.CODEC).orElse(null);
         this.tenantData = input.read("TenantData", CompoundTag.CODEC).orElse(null);
+        this.ownerUUID = input.read("OwnerUUID", UUIDUtil.CODEC).orElse(null);
     }
 
     @Override
@@ -373,7 +535,6 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
             onCleanup(serverLevel);
         }
     }
-
 
     @Override
     public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {

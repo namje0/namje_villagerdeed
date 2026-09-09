@@ -4,10 +4,11 @@
   "key": {
     "A": "#minecraft:planks",
     "B": "minecraft:book",
-    "C": "minecraft:emerald"
+    "C": "minecraft:emerald",
+    "D": "minecraft:gold_ingot"
   },
   "pattern": [
-    "AAA",
+    "ADA",
     "ABA",
     "ACA"
   ],

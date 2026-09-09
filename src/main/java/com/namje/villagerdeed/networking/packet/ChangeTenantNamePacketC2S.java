@@ -8,16 +8,19 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.Identifier;
 
-public record ToggleDeedPacketC2S(BlockPos pos) implements CustomPacketPayload {
-    public static final Type<ToggleDeedPacketC2S> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "toggle_deed_packet"));
+public record ChangeTenantNamePacketC2S(BlockPos pos, String name) implements CustomPacketPayload {
+    public static final Type<ChangeTenantNamePacketC2S> TYPE =
+            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "change_tenant_name_packet"));
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, ToggleDeedPacketC2S> STREAM_CODEC =
+    public static final StreamCodec<RegistryFriendlyByteBuf, ChangeTenantNamePacketC2S> STREAM_CODEC =
             StreamCodec.composite(
                     BlockPos.STREAM_CODEC,
-                    ToggleDeedPacketC2S::pos,
+                    ChangeTenantNamePacketC2S::pos,
 
-                    ToggleDeedPacketC2S::new
+                    ByteBufCodecs.STRING_UTF8,
+                    ChangeTenantNamePacketC2S::name,
+
+                    ChangeTenantNamePacketC2S::new
             );
 
     @Override

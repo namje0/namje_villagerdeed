@@ -2,7 +2,7 @@ package com.namje.villagerdeed.menu.custom;
 
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
-import com.namje.villagerdeed.networking.packet.ToggleDeedPacketC2S;
+import com.namje.villagerdeed.networking.packet.*;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.CycleButton;
@@ -15,11 +15,20 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
+import java.util.Collections;
 import java.util.List;
 
 public class VillagerDeedScreen extends Screen {
+    private static final int STATE_TEXT_MAX_WIDTH = 100;
+    private static final int MAX_VISIBLE_LINES = 3;
+    private List<FormattedCharSequence> cachedStateLines = Collections.emptyList();
+    private int cachedDeedState = -1;
+
     private static final Identifier GUI_TEXTURE =
             Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "textures/gui/villagerdeed/deed_gui.png");
 
@@ -77,12 +86,11 @@ public class VillagerDeedScreen extends Screen {
 
         this.tenantNameEdit = new EditBox(this.font, x + 63, y + 25, 88, 16,
                 Component.translatable("gui.villagerdeed.tenant_name"));
-        this.tenantNameEdit.setMaxLength(32);
+        this.tenantNameEdit.setMaxLength(50);
         String tenantName = this.blockEntity.getTenantName();
         this.tenantNameEdit.setValue(tenantName != null ? tenantName : "");
         this.addRenderableWidget(this.tenantNameEdit);
 
-        // 2. Buttons
         this.toggleActiveButton = this.addRenderableWidget(new ToggleActiveButton(x + 12, y + 85));
         this.evictButton = this.addRenderableWidget(new EvictButton(x + 40, y + 85));
         this.summonButton = this.addRenderableWidget(new SummonButton(x + 58, y + 85));
@@ -92,7 +100,7 @@ public class VillagerDeedScreen extends Screen {
 
         this.deedNameEdit = new EditBox(this.font, x + 9, y + 9, 142, 16,
                 Component.translatable("gui.villagerdeed.deed_name"));
-        this.deedNameEdit.setMaxLength(32);
+        this.deedNameEdit.setMaxLength(20);
         String deedName = this.blockEntity.getDeedName();
         this.deedNameEdit.setValue(deedName != null ? deedName : "");
         this.addRenderableWidget(this.deedNameEdit);
@@ -130,6 +138,11 @@ public class VillagerDeedScreen extends Screen {
     }
 
     @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         super.extractBackground(graphics, mouseX, mouseY, a);
         int x = (this.width - this.imageWidth) / 2;
@@ -145,22 +158,51 @@ public class VillagerDeedScreen extends Screen {
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
 
-        graphics.text(this.font, Component.translatable("gui.villagerdeed.state.invalid"), x + 65, y + 44, -12566464, false);
-        graphics.text(this.font, Component.translatable("gui.villagerdeed.button.profession"), x + 10, y + 107, -12566464, false);
-        graphics.text(this.font, Component.translatable("gui.villagerdeed.button.range"), x + 113, y + 107, -12566464, false);
-    }
+        int currentState = this.blockEntity.getDeedState();
 
-    @Override
-    public boolean isPauseScreen() {
-        return false;
+        if (currentState == 2) {
+            Level level = this.minecraft.level;
+            Villager tenant = (level != null) ? this.blockEntity.getTenantEntity(level) : null;
+
+            Component stateComponent;
+            if (tenant != null) {
+                String health = String.format("%.0f/%.0f", tenant.getHealth(), tenant.getMaxHealth());
+
+                stateComponent = Component.translatable("gui.villagerdeed.state.tenantData", health);
+            } else {
+                stateComponent = Component.translatable("gui.villagerdeed.state.invalid");
+            }
+
+            this.cachedStateLines = this.font.split(stateComponent, STATE_TEXT_MAX_WIDTH);
+            this.cachedDeedState = currentState;
+
+        } else if (this.cachedDeedState != currentState) {
+            String messageKey = switch (currentState) {
+                case 0 -> "no_bed";
+                case 1 -> "waiting";
+                case 3 -> "respawning";
+                case 4 -> "disabled";
+                default -> "invalid";
+            };
+
+            Component stateComponent = Component.translatable("gui.villagerdeed.state." + messageKey);
+            this.cachedStateLines = this.font.split(stateComponent, STATE_TEXT_MAX_WIDTH);
+            this.cachedDeedState = currentState;
+        }
+
+        int linesToDraw = Math.min(MAX_VISIBLE_LINES, this.cachedStateLines.size());
+        for (int i = 0; i < linesToDraw; i++) {
+            FormattedCharSequence line = this.cachedStateLines.get(i);
+            int lineY = y + 44 + (i * this.font.lineHeight);
+            graphics.text(this.font, line, x + 65, lineY, 0xFF404040, false);
+        }
+
+        graphics.text(this.font, Component.translatable("gui.villagerdeed.button.profession"), x + 10, y + 107, 0xFF404040, false);
+        graphics.text(this.font, Component.translatable("gui.villagerdeed.button.range"), x + 113, y + 107, 0xFF404040, false);
     }
 
     private abstract static class DeedScreenButton extends AbstractButton {
         private boolean selected;
-
-        protected DeedScreenButton(int x, int y, int width, int height) {
-            super(x, y, width, height, CommonComponents.EMPTY);
-        }
 
         protected DeedScreenButton(int x, int y, int width, int height, Component label) {
             super(x, y, width, height, label);
@@ -221,7 +263,7 @@ public class VillagerDeedScreen extends Screen {
 
         @Override
         public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new ToggleDeedPacketC2S("test", 1));
+            ClientPacketDistributor.sendToServer(new ToggleDeedPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
     }
 
@@ -232,7 +274,7 @@ public class VillagerDeedScreen extends Screen {
 
         @Override
         public void onPress(InputWithModifiers input) {
-            // Packet transmission: Evict tenant & flush entity reference
+            ClientPacketDistributor.sendToServer(new EvictTenantPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
     }
 
@@ -243,7 +285,7 @@ public class VillagerDeedScreen extends Screen {
 
         @Override
         public void onPress(InputWithModifiers input) {
-            // Packet transmission: Trigger pathfinder navigation to block origin
+            ClientPacketDistributor.sendToServer(new SummonTenantPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
     }
 
@@ -265,7 +307,7 @@ public class VillagerDeedScreen extends Screen {
 
         @Override
         public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new ToggleDeedPacketC2S("test", 1));
+            ClientPacketDistributor.sendToServer(new ChangeDeedNamePacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos(), deedNameEdit.getValue()));
         }
     }
 
@@ -276,7 +318,7 @@ public class VillagerDeedScreen extends Screen {
 
         @Override
         public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new ToggleDeedPacketC2S("test", 1));
+            ClientPacketDistributor.sendToServer(new ChangeTenantNamePacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos(), tenantNameEdit.getValue()));
         }
     }
 }

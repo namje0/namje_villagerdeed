@@ -12,6 +12,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -54,31 +55,6 @@ public class VillagerDeedBlock extends BaseEntityBlock {
                 : createTickerHelper(blockEntityType, ModBlockEntities.VILLAGERDEED_BE.get(), VillagerDeedBlockEntity::serverTick);
     }
 
-    @Nullable
-    public static BlockPos findAdjacentBedHead(LevelReader level, BlockPos pos) {
-        for (Direction dir : Direction.Plane.HORIZONTAL) {
-            BlockPos neighborPos = pos.relative(dir);
-            BlockState neighborState = level.getBlockState(neighborPos);
-
-            if (neighborState.getBlock() instanceof BedBlock && neighborState.hasProperty(BedBlock.PART)) {
-                BedPart part = neighborState.getValue(BedBlock.PART);
-                if (part == BedPart.HEAD) {
-                    return neighborPos;
-                } else if (part == BedPart.FOOT && neighborState.hasProperty(BedBlock.FACING)) {
-                    Direction facing = neighborState.getValue(BedBlock.FACING);
-                    BlockPos headPos = neighborPos.relative(facing);
-                    BlockState headState = level.getBlockState(headPos);
-                    if (headState.getBlock() instanceof BedBlock
-                            && headState.hasProperty(BedBlock.PART)
-                            && headState.getValue(BedBlock.PART) == BedPart.HEAD) {
-                        return headPos;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
     @Override
     protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(FACING);
@@ -104,7 +80,7 @@ public class VillagerDeedBlock extends BaseEntityBlock {
         super.onPlace(state, level, pos, oldState, isMoving);
         if (!level.isClientSide()) {
             if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedEntity) {
-                deedEntity.updateBedPresence(findAdjacentBedHead(level, pos));
+                deedEntity.updateBedPresence(deedEntity.findAdjacentBedHead(level, pos));
             }
         }
     }
@@ -113,7 +89,7 @@ public class VillagerDeedBlock extends BaseEntityBlock {
     protected BlockState updateShape(BlockState state, LevelReader levelReader, ScheduledTickAccess ticks, BlockPos pos, Direction directionToNeighbour, BlockPos neighbourPos, BlockState neighbourState, RandomSource random) {
         if (levelReader instanceof Level level && !level.isClientSide()) {
             if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedEntity) {
-                deedEntity.updateBedPresence(findAdjacentBedHead(level, pos));
+                deedEntity.updateBedPresence(deedEntity.findAdjacentBedHead(level, pos));
             }
         }
         return super.updateShape(state, levelReader, ticks, pos, directionToNeighbour, neighbourPos, neighbourState, random);
@@ -129,6 +105,18 @@ public class VillagerDeedBlock extends BaseEntityBlock {
         }
         return InteractionResult.SUCCESS;
     }
+
+    @Override
+    public void setPlacedBy(Level level, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
+        super.setPlacedBy(level, pos, state, placer, stack);
+
+        if (!level.isClientSide() && placer instanceof Player player) {
+            if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedEntity) {
+                deedEntity.setOwnerUUID(player.getUUID());
+            }
+        }
+    }
+
 
     static {
         FACING = HorizontalDirectionalBlock.FACING;
