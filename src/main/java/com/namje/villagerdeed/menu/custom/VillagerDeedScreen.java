@@ -12,16 +12,18 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class VillagerDeedScreen extends Screen {
     private static final int STATE_TEXT_MAX_WIDTH = 100;
@@ -68,7 +70,7 @@ public class VillagerDeedScreen extends Screen {
     private ConfirmDeedNameButton confirmDeedNameButton;
     private ConfirmTenantNameButton confirmTenantNameButton;
 
-    private CycleButton<String> professionButton;
+    private CycleButton<ResourceKey<VillagerProfession>> professionButton;
 
     private final VillagerDeedBlockEntity blockEntity;
 
@@ -103,18 +105,6 @@ public class VillagerDeedScreen extends Screen {
         String deedName = this.blockEntity.getDeedName();
         this.deedNameEdit.setValue(deedName != null ? deedName : "");
         this.addRenderableWidget(this.deedNameEdit);
-
-        this.professionButton = this.addRenderableWidget(
-                CycleButton.builder(
-                                Component::literal,
-                                "None"
-                        )
-                        .withValues(List.of("None"))
-                        .displayOnlyValue()
-                        .create(x + 9, y + 118, 77, 20, Component.translatable("gui.villagerdeed.button.profession"), (button, value) -> {
-                            // Deferred profession specification
-                        })
-        );
     }
 
     @Override
@@ -181,8 +171,6 @@ public class VillagerDeedScreen extends Screen {
             int lineY = y + 44 + (i * this.font.lineHeight);
             graphics.text(this.font, line, x + 65, lineY, 0xFF404040, false);
         }
-
-        graphics.text(this.font, Component.translatable("gui.villagerdeed.button.profession"), x + 10, y + 107, 0xFF404040, false);
     }
 
     private abstract static class DeedScreenButton extends AbstractButton {

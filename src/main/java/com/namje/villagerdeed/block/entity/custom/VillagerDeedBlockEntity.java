@@ -2,9 +2,7 @@ package com.namje.villagerdeed.block.entity.custom;
 
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.ModBlockEntities;
-import com.namje.villagerdeed.menu.custom.VillagerDeedMenu;
 import net.minecraft.core.*;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -45,7 +43,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
-public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider {
+public class VillagerDeedBlockEntity extends BlockEntity {
     private static final List<String> TENANT_NAMES = List.of(
             "Ramon", "Cedric", "Hunter", "Richard", "Clemence", "Ollie", "Fennel", "Percy",
             "Beatrice", "Camille", "Jasmine", "Eleanor", "Minerva", "Ignis", "Elena", "Laura",
@@ -583,16 +581,6 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         return saveWithoutMetadata(registries);
-    }
-
-    @Override
-    public Component getDisplayName() {
-        return Component.translatable("block.villagerdeed.namje_villagerdeed");
-    }
-
-    @Override
-    public @Nullable AbstractContainerMenu createMenu(int id, Inventory inventory, Player player) {
-        return new VillagerDeedMenu(id, inventory, this);
     }
 
     public void markUpdated() {
