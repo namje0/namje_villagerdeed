@@ -151,6 +151,32 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         }
     }
 
+    public ResourceKey<VillagerProfession> getTenantProfession() { return this.tenantProfession; }
+    public void setTenantProfession(ResourceKey<VillagerProfession> profession) {
+        this.tenantProfession = profession;
+        if (this.level instanceof ServerLevel serverLevel) {
+            Villager activeTenant = this.getTenantEntity(serverLevel);
+            if (activeTenant != null) {
+                applyProfessionToTenant(activeTenant, serverLevel, profession);
+                this.snapshotTenantData(activeTenant);
+            }
+        }
+        this.markUpdated();
+    }
+
+    private void applyProfessionToTenant(Villager tenant, ServerLevel level, ResourceKey<VillagerProfession> professionKey) {
+        if (professionKey == VillagerProfession.NONE) {
+            return;
+        }
+        Holder<VillagerProfession> profession = level.registryAccess()
+                .lookupOrThrow(Registries.VILLAGER_PROFESSION)
+                .getOrThrow(professionKey);
+
+        int currentXp = tenant.getVillagerXp();
+        tenant.setVillagerData(tenant.getVillagerData().withProfession(profession));
+        tenant.setVillagerXp(Math.max(currentXp, 1));
+    }
+
     public void toggleDeedAvailability() {
         if (this.deedState != 4) {
             setDeedState(4);
@@ -381,19 +407,6 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         }
     }
 
-    private void applyProfession(Villager tenant, ServerLevel level) {
-        if (this.tenantProfession == VillagerProfession.NONE) {
-            return;
-        }
-        Holder<VillagerProfession> profession = level.registryAccess()
-                .lookupOrThrow(Registries.VILLAGER_PROFESSION)
-                .getOrThrow(this.tenantProfession);
-
-        int currentXp = tenant.getVillagerXp();
-        tenant.setVillagerData(tenant.getVillagerData().withProfession(profession));
-        tenant.setVillagerXp(Math.max(currentXp, 1));
-    }
-
     private static @Nullable EntityReference<LivingEntity> validateTenant(@Nullable EntityReference<LivingEntity> currentRef, ServerLevel level) {
         if (currentRef != null) {
             Villager villager = getTenantFromRef(currentRef, level);
@@ -440,7 +453,7 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
             }
         }
 
-        applyProfession(tenant, level);
+        applyProfessionToTenant(tenant, level, this.tenantProfession);
         if (this.tenantName != null && !this.tenantName.isEmpty()) {
             tenant.setCustomName(Component.literal(this.tenantName));
         }
