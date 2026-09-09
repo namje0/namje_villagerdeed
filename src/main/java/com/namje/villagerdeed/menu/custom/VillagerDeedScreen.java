@@ -68,7 +68,6 @@ public class VillagerDeedScreen extends Screen {
     private ConfirmDeedNameButton confirmDeedNameButton;
     private ConfirmTenantNameButton confirmTenantNameButton;
 
-    private CycleButton<Integer> leashRangeButton;
     private CycleButton<String> professionButton;
 
     private final VillagerDeedBlockEntity blockEntity;
@@ -114,20 +113,6 @@ public class VillagerDeedScreen extends Screen {
                         .displayOnlyValue()
                         .create(x + 9, y + 118, 77, 20, Component.translatable("gui.villagerdeed.button.profession"), (button, value) -> {
                             // Deferred profession specification
-                        })
-        );
-
-        this.leashRangeButton = this.addRenderableWidget(
-                CycleButton.builder(
-                                (Integer val) -> val == 0
-                                        ? Component.translatable("gui.villagerdeed.leash_off")
-                                        : Component.literal(val + " Blocks"),
-                                8
-                        )
-                        .withValues(List.of(8, 16, 32, 0))
-                        .displayOnlyValue()
-                        .create(x + 90, y + 118, 77, 20, Component.translatable("gui.villagerdeed.button.leash_range"), (button, value) -> {
-                            // Packet transmission: Update leash boundary radius
                         })
         );
     }
@@ -198,7 +183,6 @@ public class VillagerDeedScreen extends Screen {
         }
 
         graphics.text(this.font, Component.translatable("gui.villagerdeed.button.profession"), x + 10, y + 107, 0xFF404040, false);
-        graphics.text(this.font, Component.translatable("gui.villagerdeed.button.range"), x + 113, y + 107, 0xFF404040, false);
     }
 
     private abstract static class DeedScreenButton extends AbstractButton {

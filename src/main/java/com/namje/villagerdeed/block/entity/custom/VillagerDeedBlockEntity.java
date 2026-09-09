@@ -4,6 +4,7 @@ import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.ModBlockEntities;
 import com.namje.villagerdeed.menu.custom.VillagerDeedMenu;
 import net.minecraft.core.*;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -13,6 +14,8 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.ProblemReporter;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.*;
@@ -23,6 +26,7 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.schedule.Activity;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.Level;
@@ -62,6 +66,7 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
     public static final double MAX_LEASH_DISTANCE = 16.0;
     public static final double HARD_TELEPORT_DISTANCE = 32.0;
     public static final int TENANT_UPD_TIME = 1200;
+    public static final int TENANT_LOGIC_TIME = 200;
 
     /*
     0 = invalid, either due to no bed or other means; no functionality running
@@ -75,7 +80,6 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
     private int moveInTime = 0;
     private String deedName = "Room";
     private String tenantName = "Villager";
-    private double leashDistance = MAX_LEASH_DISTANCE;
 
     private @Nullable UUID ownerUUID;
     private @Nullable BlockPos bedPos;
@@ -265,7 +269,10 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
 
             entity.moveInTime = 0;
 
-            entity.restrictTenant(activeTenant, pos);
+            if (serverLevel.getGameTime() % TENANT_LOGIC_TIME == 0) {
+                entity.hoverAroundDeed(activeTenant, entity.getBlockPos());
+                entity.restrictTenant(activeTenant, pos);
+            }
 
             if (serverLevel.getGameTime() % TENANT_UPD_TIME == 0) {
                 entity.snapshotTenantData(activeTenant);
@@ -302,10 +309,6 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
 
         if (distSqr > MAX_LEASH_DISTANCE * MAX_LEASH_DISTANCE) {
             if (tenant.getNavigation().isDone()) {
-                VillagerDeed.LOGGER.info("attempting to navigate tenant to deed");
-                //tenant.getNavigation().moveTo(deedPos.getX() + 0.5,
-                //        deedPos.getY() + 1.0, deedPos.getZ() + 0.5, 1);
-
                 Brain<Villager> brain = tenant.getBrain();
                 brain.stopAll(serverLevel, tenant);
 
@@ -326,9 +329,10 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
         //TODO: if spam button enough teleport(?)
 
-        VillagerDeed.LOGGER.info("summoning tenant to deed");
-        //tenant.getNavigation().moveTo(deedPos.getX() + 0.5,
-        //        deedPos.getY() + 1.0, deedPos.getZ() + 0.5, 1);
+        Player owner = this.getOwnerPlayer(level);
+        if (owner != null) {
+            serverLevel.playSound(null, this.getBlockPos(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 2f, 1f);
+        }
 
         Brain<Villager> brain = tenant.getBrain();
         brain.stopAll(serverLevel, tenant);
@@ -341,6 +345,28 @@ public class VillagerDeedBlockEntity extends BlockEntity implements MenuProvider
         brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
 
         WalkTarget walkTarget = new WalkTarget(deedPos, 1f, 3);
+        brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
+    }
+
+    // during a villager's work hours, hover around the deed instead
+    private void hoverAroundDeed(Villager tenant, BlockPos deedPos) {
+        if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
+        Brain<Villager> brain = tenant.getBrain();
+
+        if (!brain.isActive(Activity.WORK)) {
+            return;
+        }
+
+        brain.stopAll(serverLevel, tenant);
+
+        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
+        brain.eraseMemory(MemoryModuleType.PATH);
+        brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
+        brain.eraseMemory(MemoryModuleType.INTERACTION_TARGET);
+        brain.eraseMemory(MemoryModuleType.BREED_TARGET);
+        brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+
+        WalkTarget walkTarget = new WalkTarget(deedPos, 0.6f, 10);
         brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
     }
 

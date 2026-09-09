@@ -17,6 +17,7 @@
   "gui.villagerdeed.button.toggle_active": "Toggle Deed Availability",
   "gui.villagerdeed.button.summon": "Summon Tenant",
   "gui.villagerdeed.button.shuffle": "Shuffle Trades",
+  "gui.villagerdeed.button.restrict_access": "Restrict Deed Access",
   "gui.villagerdeed.button.confirm_deed": "Confirm Deed Name",
   "gui.villagerdeed.button.confirm_tenant": "Confirm Tenant Name",
 
