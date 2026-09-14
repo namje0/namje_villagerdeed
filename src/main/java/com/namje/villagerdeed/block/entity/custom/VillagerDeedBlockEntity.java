@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.ModBlockEntities;
 import net.minecraft.core.*;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.nbt.CompoundTag;
@@ -566,6 +567,9 @@ public class VillagerDeedBlockEntity extends BlockEntity {
 
             snapshotTenantData(tenant);
 
+            Position tenantPos = tenant.position();
+            level.sendParticles(ParticleTypes.POOF, tenantPos.x(), tenantPos.y() + 0.5, tenantPos.z(), 20, 0.25, 0.25, 0.25, 0.05);
+
             level.sendBlockUpdated(pos, getBlockState(), getBlockState(), 3);
             VillagerDeed.LOGGER.info("tenant created/restored and bound to deed");
 
@@ -591,7 +595,14 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         if (level instanceof ServerLevel serverLevel) {
             Villager tenant = this.getTenantEntity(serverLevel);
             if (tenant != null && tenant.isAlive()) {
-                VillagerDeed.LOGGER.info("Tenant cleaned up");
+                Position tenantPos = tenant.position();
+                serverLevel.sendParticles(ParticleTypes.POOF, tenantPos.x(), tenantPos.y() + 0.5, tenantPos.z(), 20, 0.25, 0.25, 0.25, 0.05);
+
+                // unlink bed
+                BlockPos linkedBedPos = this.getBedPos();
+                if (linkedBedPos != null) {
+                    serverLevel.getPoiManager().release(linkedBedPos);
+                }
                 tenant.discard();
             }
         }
