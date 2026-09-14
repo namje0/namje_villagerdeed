@@ -278,7 +278,24 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         return null;
     }
 
+    private boolean findExistingDeed(Level level, BlockPos bedPos) {
+        for (Direction dir : Direction.Plane.HORIZONTAL) {
+            BlockPos neighbor = bedPos.relative(dir);
+            if (!neighbor.equals(this.worldPosition) && level.getBlockEntity(neighbor) instanceof VillagerDeedBlockEntity) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void updateBedPresence(@Nullable BlockPos foundBedPos) {
+        if (foundBedPos != null && this.level != null && !this.level.isClientSide()) {
+            if (findExistingDeed(this.level, foundBedPos)) {
+                this.level.destroyBlock(this.worldPosition, true);
+                return;
+            }
+        }
+
         this.bedPos = foundBedPos;
         boolean hasBed = (foundBedPos != null);
 
@@ -381,7 +398,6 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         }
     }
 
-    // ranch tenants to a radius around the deed so we don't have to deal with unloaded tenants and loaded deeds if possible
     private void restrictTenant(Villager tenant, BlockPos deedPos) {
         if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
         if (this.getTenantEntity(level) == null) {
@@ -415,8 +431,6 @@ public class VillagerDeedBlockEntity extends BlockEntity {
             return;
         }
 
-        //TODO: if spam button enough teleport(?)
-
         Player owner = this.getOwnerPlayer(level);
         if (owner != null) {
             serverLevel.playSound(null, this.getBlockPos(), SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 2f, 1f);
@@ -429,7 +443,6 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
     }
 
-    // during a villager's work/idle hours, hover around the deed like a job site
     private void hoverAroundDeed(Villager tenant, BlockPos deedPos) {
         if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
         Brain<Villager> brain = tenant.getBrain();
