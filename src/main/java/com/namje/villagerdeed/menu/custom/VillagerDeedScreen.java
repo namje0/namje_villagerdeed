@@ -13,6 +13,9 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.VillagerRenderer;
+import net.minecraft.client.renderer.entity.state.VillagerRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -21,6 +24,10 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import org.joml.Quaternionf;
+import org.joml.Quaternionfc;
+import org.joml.Vector3f;
+import org.joml.Vector3fc;
 
 import java.util.*;
 
@@ -31,6 +38,10 @@ public class VillagerDeedScreen extends Screen {
     private int cachedDeedState = -1;
     private String cachedDeedName = null;
     private String cachedTenantName = null;
+
+    private static final Vector3fc VILLAGER_TRANSLATION = new Vector3f(0.0F, 1.0F, 0.0F);
+    private static final Quaternionfc VILLAGER_ANGLE = new Quaternionf().rotationXYZ(0.2F, 0.0F, (float) Math.PI);
+    private static final float VILLAGER_SCALE = 24.0F;
 
     private static final Identifier GUI_TEXTURE =
             Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "textures/gui/villagerdeed/deed_gui.png");
@@ -80,6 +91,7 @@ public class VillagerDeedScreen extends Screen {
     private CycleButton<ResourceKey<VillagerProfession>> professionButton;
 
     private final VillagerDeedBlockEntity blockEntity;
+    private final VillagerRenderState villagerRenderState = new VillagerRenderState();
 
     public VillagerDeedScreen(Component title, VillagerDeedBlockEntity blockEntity) {
         super(title);
@@ -181,6 +193,27 @@ public class VillagerDeedScreen extends Screen {
         }
     }
 
+    private void updateVillagerStateFromEntity(Villager villager, float partialTick, int mouseX, int mouseY, int guiLeft, int guiTop) {
+        EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
+        if (dispatcher.getRenderer(villager) instanceof VillagerRenderer renderer) {
+            renderer.extractRenderState(villager, this.villagerRenderState, partialTick);
+
+            float entityCenterX = guiLeft + 30.0F;
+            float entityCenterY = guiTop + 35.0F;
+
+            float deltaX = entityCenterX - mouseX;
+            float deltaY = entityCenterY - mouseY;
+
+            float yawOffset = (float) Math.atan(deltaX / 40.0F) * 20.0F;
+            float pitchOffset = (float) Math.atan(deltaY / 40.0F) * 20.0F;
+
+            this.villagerRenderState.bodyRot = 200.0F;
+
+            this.villagerRenderState.yRot = Math.clamp(yawOffset, -45.0F, 45.0F);
+            this.villagerRenderState.xRot = Math.clamp(-pitchOffset, -30.0F, 30.0F);
+        }
+    }
+
     @Override
     public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         super.extractBackground(graphics, mouseX, mouseY, a);
@@ -189,6 +222,28 @@ public class VillagerDeedScreen extends Screen {
 
         graphics.blit(RenderPipelines.GUI_TEXTURED, GUI_TEXTURE, x, y, 0, 0, this.imageWidth,
                 this.imageHeight, 256, 256);
+
+        if (this.blockEntity.getDeedState() == 2) {
+            Level level = this.minecraft.level;
+            Villager tenant = (level != null) ? this.blockEntity.getTenantEntity(level) : null;
+            if (tenant != null) {
+                this.updateVillagerStateFromEntity(tenant, a, mouseX, mouseY, x, y);
+
+                int x0 = x + 8;
+                int y0 = y + 24;
+                int x1 = x + 59;
+                int y1 = y + 75;
+
+                graphics.entity(
+                        this.villagerRenderState,
+                        VILLAGER_SCALE,
+                        VILLAGER_TRANSLATION,
+                        VILLAGER_ANGLE,
+                        null,
+                        x0, y0, x1, y1
+                );
+            }
+        }
     }
 
     @Override
