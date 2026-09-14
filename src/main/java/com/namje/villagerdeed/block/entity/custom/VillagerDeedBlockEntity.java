@@ -401,14 +401,7 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         if (distSqr > MAX_LEASH_DISTANCE * MAX_LEASH_DISTANCE) {
             if (tenant.getNavigation().isDone()) {
                 Brain<Villager> brain = tenant.getBrain();
-                brain.stopAll(serverLevel, tenant);
-
-                brain.eraseMemory(MemoryModuleType.WALK_TARGET);
-                brain.eraseMemory(MemoryModuleType.PATH);
-                brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
-                brain.eraseMemory(MemoryModuleType.INTERACTION_TARGET);
-                brain.eraseMemory(MemoryModuleType.BREED_TARGET);
-                brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+                stopVillagerMemory(tenant, serverLevel, brain);
 
                 WalkTarget walkTarget = new WalkTarget(deedPos, 0.6f, 6);
                 brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
@@ -430,32 +423,27 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         }
 
         Brain<Villager> brain = tenant.getBrain();
-        brain.stopAll(serverLevel, tenant);
-
-        brain.eraseMemory(MemoryModuleType.WALK_TARGET);
-        brain.eraseMemory(MemoryModuleType.PATH);
-        brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
-        brain.eraseMemory(MemoryModuleType.INTERACTION_TARGET);
-        brain.eraseMemory(MemoryModuleType.BREED_TARGET);
-        brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+        stopVillagerMemory(tenant, serverLevel, brain);
 
         WalkTarget walkTarget = new WalkTarget(deedPos, 1f, 3);
         brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
     }
 
-    // during a villager's work hours, hover around the deed instead
+    // during a villager's work/idle hours, hover around the deed like a job site
     private void hoverAroundDeed(Villager tenant, BlockPos deedPos) {
         if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
         Brain<Villager> brain = tenant.getBrain();
 
-        VillagerDeed.LOGGER.info(brain.getActiveActivities().toString());
-
-        if (!brain.isActive(Activity.WORK)) {
-            VillagerDeed.LOGGER.info("not working, dont move");
+        if (!brain.isActive(Activity.WORK) && !brain.isActive(Activity.IDLE)) {
             return;
         }
+        stopVillagerMemory(tenant, serverLevel, brain);
 
-        VillagerDeed.LOGGER.info("move villager to deed");
+        WalkTarget walkTarget = new WalkTarget(deedPos, 0.6f, 10);
+        brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
+    }
+
+    private static void stopVillagerMemory(Villager tenant, ServerLevel serverLevel, Brain<Villager> brain) {
         brain.stopAll(serverLevel, tenant);
 
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -464,9 +452,6 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         brain.eraseMemory(MemoryModuleType.INTERACTION_TARGET);
         brain.eraseMemory(MemoryModuleType.BREED_TARGET);
         brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
-
-        WalkTarget walkTarget = new WalkTarget(deedPos, 0.6f, 7);
-        brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
     }
 
     private void snapshotTenantData(Villager tenant) {
