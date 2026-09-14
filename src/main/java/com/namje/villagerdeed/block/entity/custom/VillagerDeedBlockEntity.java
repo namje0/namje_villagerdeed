@@ -21,6 +21,8 @@ import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
+import net.minecraft.world.entity.ai.village.poi.PoiManager;
+import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.entity.player.Player;
@@ -36,6 +38,7 @@ import net.minecraft.world.level.storage.TagValueInput;
 import net.minecraft.world.level.storage.TagValueOutput;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.phys.AABB;
 
 import javax.annotation.Nullable;
 import java.util.*;
@@ -526,6 +529,38 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         tenant.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0.0F, 0.0F);
         tenant.setHealth(tenant.getMaxHealth());
 
+        // bind to bed
+        BlockPos linkedBedPos = this.getBedPos();
+        if (linkedBedPos != null) {
+            PoiManager poiManager = level.getPoiManager();
+            GlobalPos targetBedGlobalPos = GlobalPos.of(level.dimension(), bedPos);
+            AABB searchBox = new AABB(bedPos).inflate(48.0);
+            List<Villager> nearbyVillagers = level.getEntitiesOfClass(Villager.class, searchBox);
+
+            for (Villager villager : nearbyVillagers) {
+                villager.getBrain().getMemory(MemoryModuleType.HOME).ifPresent(homePos -> {
+                    if (homePos.equals(targetBedGlobalPos)) {
+                        villager.getBrain().eraseMemory(MemoryModuleType.HOME);
+                    }
+                });
+            }
+            if (poiManager.exists(bedPos, holder -> holder.is(PoiTypes.HOME))) {
+                poiManager.release(bedPos);
+            }
+
+            if (poiManager.exists(linkedBedPos, holder -> holder.is(PoiTypes.HOME))) {
+                poiManager.take(
+                        holder -> holder.is(PoiTypes.HOME),
+                        (type, p) -> p.equals(linkedBedPos),
+                        linkedBedPos,
+                        1
+                );
+            }
+            tenant.getBrain().setMemory(MemoryModuleType.HOME, targetBedGlobalPos);
+            tenant.getBrain().setMemory(MemoryModuleType.LAST_SLEPT, level.getGameTime());
+            tenant.startSleeping(linkedBedPos);
+        }
+
         if (level.addFreshEntity(tenant)) {
             this.tenant = EntityReference.of(tenant);
 
@@ -582,16 +617,15 @@ public class VillagerDeedBlockEntity extends BlockEntity {
 
     public void onCleanup(Level level) {
         if (level instanceof ServerLevel serverLevel) {
-            cleanupTenant(level);
-
-            if (this.tenant != null) {
+            if (this.tenantData != null) {
                 notifySubscribers(serverLevel, Component.translatable("block.villagerdeed.namje_villagerdeed.destroyed",
                         this.getDeedName(), this.getTenantName()));
             }
 
+            cleanupTenant(level);
+
             if (this.bedPos != null) {
                 if (serverLevel.getBlockState(this.bedPos).getBlock() instanceof BedBlock) {
-                    VillagerDeed.LOGGER.info("destroying registered bed at {}", this.bedPos);
                     serverLevel.destroyBlock(this.bedPos, true);
                 }
                 this.bedPos = null;
