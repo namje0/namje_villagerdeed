@@ -30,5 +30,8 @@ public class ModEvents {
 
         registrar.playToServer(ChangeTenantNamePacketC2S.TYPE,
                 ChangeTenantNamePacketC2S.STREAM_CODEC, ClientPayloadHandler::handleChangeTenantNamePacket);
+        registrar.playToServer(SwapTenantProfessionPacketC2S.TYPE,
+                SwapTenantProfessionPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleSwapTenantProfessionPacket);
+
     }
 }

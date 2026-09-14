@@ -3,6 +3,7 @@ package com.namje.villagerdeed.menu.custom;
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
 import com.namje.villagerdeed.networking.packet.*;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.CycleButton;
@@ -12,8 +13,6 @@ import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.InputWithModifiers;
 import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -30,34 +29,42 @@ public class VillagerDeedScreen extends Screen {
     private static final int MAX_VISIBLE_LINES = 3;
     private List<FormattedCharSequence> cachedStateLines = Collections.emptyList();
     private int cachedDeedState = -1;
+    private String cachedDeedName = null;
+    private String cachedTenantName = null;
 
     private static final Identifier GUI_TEXTURE =
             Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "textures/gui/villagerdeed/deed_gui.png");
 
     private static final Identifier BUTTON_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "widget/button");
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/button");
     private static final Identifier BUTTON_HIGHLIGHTED_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "widget/button_highlighted");
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/button_highlighted");
     private static final Identifier BUTTON_DISABLED_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "widget/button_disabled");
-    private static final Identifier BUTTON_SELECTED_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "widget/button_selected");
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/button_disabled");
+
+    private static final Identifier EVICT_ICON_SPRITE =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/evicttenantbutton");
+    private static final Identifier SUMMON_ICON_SPRITE =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/summontenantbutton");
+    private static final Identifier SWAP_PROFESSION_ICON_SPRITE =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/swapprofessionsbutton");
+    private static final Identifier EDIT_ICON_SPRITE =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/writebutton");
 
     private static final Identifier TOGGLE_DEED_TEXTURE =
             Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton");
-    private static final Identifier EVICT_TEXTURE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/evicttenantbutton");
-    private static final Identifier SUMMON_TEXTURE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/summontenantbutton");
-    private static final Identifier SHUFFLE_TEXTURE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/shuffletradesbutton");
-    private static final Identifier EDIT_TEXTURE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/writebutton");
+    private static final Identifier TOGGLE_DEED_TEXTURE_HIGHLIGHT =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_highlighted");
+    private static final Identifier TOGGLE_DEED_TEXTURE_OFF =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_off");
+    private static final Identifier TOGGLE_DEED_TEXTURE_OFF_HIGHLIGHT =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_off_highlighted");
+    private static final Identifier TOGGLE_DEED_DISABLED =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_disabled");
 
-    private static final Component STAT_LABEL = Component.translatable("gui.villagerdeed.stat_label");
 
     private final int imageWidth = 176;
-    private final int imageHeight = 147;
+    private final int imageHeight = 113;
 
     private EditBox deedNameEdit;
     private EditBox tenantNameEdit;
@@ -65,7 +72,7 @@ public class VillagerDeedScreen extends Screen {
     private ToggleActiveButton toggleActiveButton;
     private EvictButton evictButton;
     private SummonButton summonButton;
-    private ShuffleTradesButton shuffleTradesButton;
+    private SwapProfessionButton swapProfessionButton;
 
     private ConfirmDeedNameButton confirmDeedNameButton;
     private ConfirmTenantNameButton confirmTenantNameButton;
@@ -85,26 +92,33 @@ public class VillagerDeedScreen extends Screen {
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
 
-        this.tenantNameEdit = new EditBox(this.font, x + 63, y + 25, 88, 16,
+        this.cachedDeedName = this.blockEntity.getDeedName();
+        this.cachedTenantName = this.blockEntity.getTenantName();
+
+        this.tenantNameEdit = new EditBox(this.font, x + 61, y + 23, 88, 16,
                 Component.translatable("gui.villagerdeed.tenant_name"));
         this.tenantNameEdit.setMaxLength(50);
         String tenantName = this.blockEntity.getTenantName();
         this.tenantNameEdit.setValue(tenantName != null ? tenantName : "");
+        this.tenantNameEdit.setHint(Component.translatable("gui.villagerdeed.tenant_name"));
         this.addRenderableWidget(this.tenantNameEdit);
 
-        this.toggleActiveButton = this.addRenderableWidget(new ToggleActiveButton(x + 12, y + 85));
-        this.evictButton = this.addRenderableWidget(new EvictButton(x + 40, y + 85));
-        this.summonButton = this.addRenderableWidget(new SummonButton(x + 58, y + 85));
-        this.shuffleTradesButton = this.addRenderableWidget(new ShuffleTradesButton(x + 76, y + 85));
-        this.confirmDeedNameButton = this.addRenderableWidget(new ConfirmDeedNameButton(x + 151, y + 9));
-        this.confirmTenantNameButton = this.addRenderableWidget(new ConfirmTenantNameButton(x + 151, y + 25));
+        this.toggleActiveButton = this.addRenderableWidget(new ToggleActiveButton(x + 10, y + 83));
+        this.evictButton = this.addRenderableWidget(new EvictButton(x + 38, y + 83));
+        this.summonButton = this.addRenderableWidget(new SummonButton(x + 56, y + 83));
+        this.swapProfessionButton = this.addRenderableWidget(new SwapProfessionButton(x + 74, y + 83));
+        this.confirmDeedNameButton = this.addRenderableWidget(new ConfirmDeedNameButton(x + 149, y + 7));
+        this.confirmTenantNameButton = this.addRenderableWidget(new ConfirmTenantNameButton(x + 149, y + 23));
 
-        this.deedNameEdit = new EditBox(this.font, x + 9, y + 9, 142, 16,
+        this.deedNameEdit = new EditBox(this.font, x + 7, y + 7, 142, 16,
                 Component.translatable("gui.villagerdeed.deed_name"));
         this.deedNameEdit.setMaxLength(20);
         String deedName = this.blockEntity.getDeedName();
         this.deedNameEdit.setValue(deedName != null ? deedName : "");
+        this.deedNameEdit.setHint(Component.translatable("gui.villagerdeed.deed_name"));
         this.addRenderableWidget(this.deedNameEdit);
+
+        this.updateWidgetStates();
     }
 
     @Override
@@ -115,6 +129,56 @@ public class VillagerDeedScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false;
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        this.updateWidgetStates();
+    }
+
+    private void updateWidgetStates() {
+        String currentDeedName = this.blockEntity.getDeedName();
+        if (!Objects.equals(currentDeedName, this.cachedDeedName)) {
+            this.cachedDeedName = currentDeedName;
+            if (this.deedNameEdit != null && !this.deedNameEdit.isFocused()) {
+                this.deedNameEdit.setValue(currentDeedName != null ? currentDeedName : "");
+            }
+        }
+
+        String currentTenantName = this.blockEntity.getTenantName();
+        if (!Objects.equals(currentTenantName, this.cachedTenantName)) {
+            this.cachedTenantName = currentTenantName;
+            if (this.tenantNameEdit != null && !this.tenantNameEdit.isFocused()) {
+                this.tenantNameEdit.setValue(currentTenantName != null ? currentTenantName : "");
+            }
+        }
+
+        int state = this.blockEntity.getDeedState();
+
+        if (this.toggleActiveButton != null) {
+            this.toggleActiveButton.active = (state == 0 || state == 1 || state == 4);
+        }
+
+        boolean isState2 = (state == 2);
+        if (this.summonButton != null) {
+            this.summonButton.active = isState2;
+        }
+        if (this.swapProfessionButton != null) {
+            this.swapProfessionButton.active = isState2;
+        }
+
+        boolean isState2Or3 = (state == 2 || state == 3);
+        if (this.evictButton != null) {
+            this.evictButton.active = isState2Or3;
+        }
+        if (this.confirmTenantNameButton != null) {
+            this.confirmTenantNameButton.active = isState2Or3;
+        }
+        if (this.tenantNameEdit != null) {
+            this.tenantNameEdit.active = isState2Or3;
+            this.tenantNameEdit.setEditable(isState2Or3);
+        }
     }
 
     @Override
@@ -168,16 +232,18 @@ public class VillagerDeedScreen extends Screen {
         int linesToDraw = Math.min(MAX_VISIBLE_LINES, this.cachedStateLines.size());
         for (int i = 0; i < linesToDraw; i++) {
             FormattedCharSequence line = this.cachedStateLines.get(i);
-            int lineY = y + 44 + (i * this.font.lineHeight);
-            graphics.text(this.font, line, x + 65, lineY, 0xFF404040, false);
+            int lineY = y + 42 + (i * this.font.lineHeight);
+            graphics.text(this.font, line, x + 63, lineY, 0xFF404040, false);
         }
     }
 
-    private abstract static class DeedScreenButton extends AbstractButton {
-        private boolean selected;
+    private abstract static class DeedIconButton extends AbstractButton {
+        private final Identifier iconSprite;
 
-        protected DeedScreenButton(int x, int y, int width, int height, Component label) {
+        protected DeedIconButton(int x, int y, int width, int height, Identifier iconSprite, Component label) {
             super(x, y, width, height, label);
+            this.setTooltip(Tooltip.create(label));
+            this.iconSprite = iconSprite;
         }
 
         @Override
@@ -185,9 +251,7 @@ public class VillagerDeedScreen extends Screen {
             Identifier sprite;
             if (!this.active) {
                 sprite = BUTTON_DISABLED_SPRITE;
-            } else if (this.selected) {
-                sprite = BUTTON_SELECTED_SPRITE;
-            } else if (this.isHoveredOrFocused()) {
+            } else if (this.isHovered()) {
                 sprite = BUTTON_HIGHLIGHTED_SPRITE;
             } else {
                 sprite = BUTTON_SPRITE;
@@ -197,14 +261,8 @@ public class VillagerDeedScreen extends Screen {
             this.extractIcon(graphics);
         }
 
-        protected abstract void extractIcon(GuiGraphicsExtractor graphics);
-
-        public boolean isSelected() {
-            return this.selected;
-        }
-
-        public void setSelected(boolean selected) {
-            this.selected = selected;
+        protected void extractIcon(GuiGraphicsExtractor graphics) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.iconSprite, this.getX(), this.getY(), this.width, this.height);
         }
 
         @Override
@@ -213,35 +271,44 @@ public class VillagerDeedScreen extends Screen {
         }
     }
 
-    private abstract static class DeedSpriteScreenButton extends DeedScreenButton {
-        private final Identifier sprite;
+    private class ToggleActiveButton extends AbstractButton {
+        public ToggleActiveButton(int x, int y) {
+            super(x, y, 26, 16, Component.translatable("gui.villagerdeed.button.toggle_active"));
+            this.setTooltip(Tooltip.create(this.getMessage()));
+        }
 
-        protected DeedSpriteScreenButton(int x, int y, int width, int height, Identifier sprite, Component label) {
-            super(x, y, width, height, label);
-            this.setTooltip(Tooltip.create(label));
-            this.sprite = sprite;
+        private Identifier getSprite() {
+            boolean isDisabled = VillagerDeedScreen.this.blockEntity.getDeedState() == 4;
+            boolean hovered = this.active && this.isHovered();
+
+            if (!this.active) {
+                return TOGGLE_DEED_DISABLED;
+            }
+            if (isDisabled) {
+                return hovered ? TOGGLE_DEED_TEXTURE_OFF_HIGHLIGHT : TOGGLE_DEED_TEXTURE_OFF;
+            }
+            return hovered ? TOGGLE_DEED_TEXTURE_HIGHLIGHT : TOGGLE_DEED_TEXTURE;
         }
 
         @Override
-        protected void extractIcon(GuiGraphicsExtractor graphics) {
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.sprite, this.getX(), this.getY(), this.width, this.height);
-        }
-    }
-
-    private class ToggleActiveButton extends DeedSpriteScreenButton {
-        public ToggleActiveButton(int x, int y) {
-            super(x, y, 26, 16, TOGGLE_DEED_TEXTURE, Component.translatable("gui.villagerdeed.button.toggle_active"));
+        public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getSprite(), this.getX(), this.getY(), this.width, this.height);
         }
 
         @Override
         public void onPress(InputWithModifiers input) {
             ClientPacketDistributor.sendToServer(new ToggleDeedPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
+
+        @Override
+        public void updateWidgetNarration(NarrationElementOutput output) {
+            this.defaultButtonNarrationText(output);
+        }
     }
 
-    private class EvictButton extends DeedSpriteScreenButton {
+    private class EvictButton extends DeedIconButton {
         public EvictButton(int x, int y) {
-            super(x, y, 16, 16, EVICT_TEXTURE, Component.translatable("gui.villagerdeed.button.evict"));
+            super(x, y, 16, 16, EVICT_ICON_SPRITE, Component.translatable("gui.villagerdeed.button.evict"));
         }
 
         @Override
@@ -250,9 +317,9 @@ public class VillagerDeedScreen extends Screen {
         }
     }
 
-    private class SummonButton extends DeedSpriteScreenButton {
+    private class SummonButton extends DeedIconButton {
         public SummonButton(int x, int y) {
-            super(x, y, 16, 16, SUMMON_TEXTURE, Component.translatable("gui.villagerdeed.button.summon"));
+            super(x, y, 16, 16, SUMMON_ICON_SPRITE, Component.translatable("gui.villagerdeed.button.summon"));
         }
 
         @Override
@@ -261,20 +328,20 @@ public class VillagerDeedScreen extends Screen {
         }
     }
 
-    private class ShuffleTradesButton extends DeedSpriteScreenButton {
-        public ShuffleTradesButton(int x, int y) {
-            super(x, y, 16, 16, SHUFFLE_TEXTURE, Component.translatable("gui.villagerdeed.button.shuffle"));
+    private class SwapProfessionButton extends DeedIconButton {
+        public SwapProfessionButton(int x, int y) {
+            super(x, y, 16, 16, SWAP_PROFESSION_ICON_SPRITE, Component.translatable("gui.villagerdeed.button.swap_profession"));
         }
 
         @Override
         public void onPress(InputWithModifiers input) {
-            // Packet transmission: Evict tenant & flush entity reference
+            Minecraft.getInstance().setScreenAndShow(new SwapProfessionScreen(Component.translatable("block.villagerdeed.namje_villagerdeed"), VillagerDeedScreen.this.blockEntity));
         }
     }
 
-    private class ConfirmDeedNameButton extends DeedSpriteScreenButton {
+    private class ConfirmDeedNameButton extends DeedIconButton {
         public ConfirmDeedNameButton(int x, int y) {
-            super(x, y, 16, 16, EDIT_TEXTURE, Component.translatable("gui.villagerdeed.button.confirm_deed"));
+            super(x, y, 16, 16, EDIT_ICON_SPRITE, Component.translatable("gui.villagerdeed.button.confirm_deed"));
         }
 
         @Override
@@ -283,9 +350,9 @@ public class VillagerDeedScreen extends Screen {
         }
     }
 
-    private class ConfirmTenantNameButton extends DeedSpriteScreenButton {
+    private class ConfirmTenantNameButton extends DeedIconButton {
         public ConfirmTenantNameButton(int x, int y) {
-            super(x, y, 16, 16, EDIT_TEXTURE, Component.translatable("gui.villagerdeed.button.confirm_tenant"));
+            super(x, y, 16, 16, EDIT_ICON_SPRITE, Component.translatable("gui.villagerdeed.button.confirm_tenant"));
         }
 
         @Override
