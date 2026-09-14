@@ -10,7 +10,7 @@ import net.minecraft.resources.Identifier;
 
 public record ChangeTenantNamePacketC2S(BlockPos pos, String name) implements CustomPacketPayload {
     public static final Type<ChangeTenantNamePacketC2S> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "change_tenant_name_packet"));
+            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "namje_change_tenant_name_packet"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ChangeTenantNamePacketC2S> STREAM_CODEC =
             StreamCodec.composite(

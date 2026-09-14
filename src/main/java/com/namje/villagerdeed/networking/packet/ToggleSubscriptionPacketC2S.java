@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier;
 
 public record ToggleSubscriptionPacketC2S(BlockPos pos) implements CustomPacketPayload {
     public static final Type<ToggleSubscriptionPacketC2S> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "toggle_subscription_packet"));
+            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "namje_toggle_subscription_packet"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, ToggleSubscriptionPacketC2S> STREAM_CODEC =
             StreamCodec.composite(

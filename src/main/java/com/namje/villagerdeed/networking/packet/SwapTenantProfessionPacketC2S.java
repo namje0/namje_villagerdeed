@@ -12,7 +12,7 @@ import net.minecraft.world.entity.npc.villager.VillagerProfession;
 
 public record SwapTenantProfessionPacketC2S(BlockPos pos, VillagerProfession profession) implements CustomPacketPayload {
     public static final Type<SwapTenantProfessionPacketC2S> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "swap_tenant_profession_packet"));
+            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "namje_swap_tenant_profession_packet"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SwapTenantProfessionPacketC2S> STREAM_CODEC =
             StreamCodec.composite(

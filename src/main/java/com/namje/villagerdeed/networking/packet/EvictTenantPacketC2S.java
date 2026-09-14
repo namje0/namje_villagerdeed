@@ -9,7 +9,7 @@ import net.minecraft.resources.Identifier;
 
 public record EvictTenantPacketC2S(BlockPos pos) implements CustomPacketPayload {
     public static final Type<EvictTenantPacketC2S> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "evict_tenant_packet"));
+            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "namje_evict_tenant_packet"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, EvictTenantPacketC2S> STREAM_CODEC =
             StreamCodec.composite(
