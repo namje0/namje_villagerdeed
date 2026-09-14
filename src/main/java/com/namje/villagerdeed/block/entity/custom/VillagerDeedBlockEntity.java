@@ -15,17 +15,14 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.ProblemReporter;
-import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.Brain;
 import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.ai.memory.WalkTarget;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.schedule.Activity;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
@@ -76,8 +73,8 @@ public class VillagerDeedBlockEntity extends BlockEntity {
     private int deedState = 0;
 
     private int moveInTime = 0;
-    private String deedName = "Room";
-    private String tenantName = "Villager";
+    private String deedName = "";
+    private String tenantName = "";
 
     private @Nullable UUID ownerUUID;
     private @Nullable BlockPos bedPos;
@@ -114,22 +111,43 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         };
     }
 
-    public String getDeedName() { return this.deedName; }
+    public String getDeedName() {
+        if (this.deedName.isBlank()) {
+            return "Room";
+        }
+        return this.deedName;
+    }
     public void setDeedName(String name) { this.deedName = name; }
     public String getTenantName() { return this.tenantName; }
     public void setTenantName(String name) {
-        this.tenantName = name;
         if (this.level instanceof ServerLevel serverLevel) {
             Villager activeTenant = this.getTenantEntity(serverLevel);
-            if (activeTenant != null) {
-                if (name.isEmpty()) {
+
+            if (name.isBlank()) {
+                if (activeTenant != null) {
                     activeTenant.setCustomName(null);
+                    this.tenantName = activeTenant.getDisplayName().getString();
                 } else {
-                    activeTenant.setCustomName(Component.literal(name));
+                    this.tenantName = Component.translatable("entity.minecraft.villager").getString();
                 }
+            } else {
+                this.tenantName = name;
+                if (activeTenant != null) {
+                    if (name.isBlank()) {
+                        activeTenant.setCustomName(null);
+                    } else {
+                        activeTenant.setCustomName(Component.literal(name));
+                    }
+                }
+            }
+
+            if (activeTenant != null) {
                 this.snapshotTenantData(activeTenant);
             }
+        } else {
+            this.tenantName = (name != null) ? name : Component.translatable("entity.minecraft.villager").getString();
         }
+
         this.setChanged();
     }
 
@@ -286,9 +304,8 @@ public class VillagerDeedBlockEntity extends BlockEntity {
             }
 
             String currentDisplayName = activeTenant.getDisplayName().getString();
-            if (!entity.tenantName.equals(currentDisplayName)) {
-                entity.setTenantName(currentDisplayName);
-                entity.setChanged();
+            if (entity.tenantName != null && !entity.tenantName.isEmpty() && !entity.tenantName.equals(currentDisplayName)) {
+                activeTenant.setCustomName(Component.literal(entity.getTenantName()));
             }
 
             entity.moveInTime = 0;
@@ -320,6 +337,9 @@ public class VillagerDeedBlockEntity extends BlockEntity {
     // ranch tenants to a radius around the deed so we don't have to deal with unloaded tenants and loaded deeds if possible
     private void restrictTenant(Villager tenant, BlockPos deedPos) {
         if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
+        if (this.getTenantEntity(level) == null) {
+            return;
+        }
 
         double distSqr = tenant.distanceToSqr(deedPos.getX() + 0.5,
                 deedPos.getY(), deedPos.getZ() + 0.5);
@@ -351,6 +371,10 @@ public class VillagerDeedBlockEntity extends BlockEntity {
 
     public void summonTenant(Villager tenant, BlockPos deedPos) {
         if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
+        if (this.getTenantEntity(level) == null) {
+            return;
+        }
+
         //TODO: if spam button enough teleport(?)
 
         Player owner = this.getOwnerPlayer(level);
@@ -390,7 +414,7 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         brain.eraseMemory(MemoryModuleType.BREED_TARGET);
         brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
 
-        WalkTarget walkTarget = new WalkTarget(deedPos, 0.6f, 10);
+        WalkTarget walkTarget = new WalkTarget(deedPos, 0.6f, 7);
         brain.setMemory(MemoryModuleType.WALK_TARGET, walkTarget);
     }
 
@@ -430,7 +454,7 @@ public class VillagerDeedBlockEntity extends BlockEntity {
                 //display msg to block owner if they exist
                 Player owner = this.getOwnerPlayer(level);
                 if (owner != null) {
-                    owner.sendSystemMessage(Component.translatable("block.villagerdeed.namje_villagerdeed.respawned", this.tenantName, this.deedName));
+                    owner.sendSystemMessage(Component.translatable("block.villagerdeed.namje_villagerdeed.respawned", this.getTenantName(), this.getDeedName()));
                 }
             }
         } else {
@@ -439,7 +463,7 @@ public class VillagerDeedBlockEntity extends BlockEntity {
             //display msg to block owner if they exist
             Player owner = this.getOwnerPlayer(level);
             if (owner != null) {
-                owner.sendSystemMessage(Component.translatable("block.villagerdeed.namje_villagerdeed.moved_in", this.tenantName, this.deedName));
+                owner.sendSystemMessage(Component.translatable("block.villagerdeed.namje_villagerdeed.moved_in", this.getTenantName(), this.getDeedName()));
             }
 
             List<VillagerProfession> professions = getProfessions();
