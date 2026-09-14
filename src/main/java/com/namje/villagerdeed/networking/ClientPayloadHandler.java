@@ -3,10 +3,12 @@ package com.namje.villagerdeed.networking;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
 import com.namje.villagerdeed.networking.packet.*;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public class ClientPayloadHandler {
@@ -68,6 +70,21 @@ public class ClientPayloadHandler {
         if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedBlockEntity) {
             deedBlockEntity.setTenantName(name);
             deedBlockEntity.markUpdated();
+        }
+    }
+
+    public static void handleSwapTenantProfessionPacket(SwapTenantProfessionPacketC2S packet, IPayloadContext context) {
+        ServerPlayer player = (ServerPlayer) context.player();
+        ServerLevel level = (ServerLevel) context.player().level();
+        BlockPos pos = packet.pos();
+        VillagerProfession profession = packet.profession();
+
+        // TODO: sanity check position
+        if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedBlockEntity) {
+            BuiltInRegistries.VILLAGER_PROFESSION.getResourceKey(profession).ifPresent(key -> {
+                deedBlockEntity.setTenantProfession(key);
+                deedBlockEntity.markUpdated();
+            });
         }
     }
 }
