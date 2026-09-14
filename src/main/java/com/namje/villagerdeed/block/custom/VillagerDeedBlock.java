@@ -27,6 +27,8 @@ import net.minecraft.world.level.block.state.properties.*;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jspecify.annotations.Nullable;
 
+import java.util.UUID;
+
 public class VillagerDeedBlock extends BaseEntityBlock {
     public static final MapCodec<VillagerDeedBlock> CODEC = simpleCodec(VillagerDeedBlock::new);
     public static final EnumProperty<Direction> FACING;
@@ -112,7 +114,9 @@ public class VillagerDeedBlock extends BaseEntityBlock {
 
         if (!level.isClientSide() && placer instanceof Player player) {
             if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedEntity) {
-                deedEntity.setOwnerUUID(player.getUUID());
+                UUID playerUUID = player.getUUID();
+                deedEntity.setOwnerUUID(playerUUID);
+                deedEntity.subscribePlayer(playerUUID);
             }
         }
     }

@@ -6,7 +6,6 @@ import com.namje.villagerdeed.networking.packet.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
-import net.minecraft.client.gui.components.CycleButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -18,10 +17,8 @@ import net.minecraft.client.renderer.entity.VillagerRenderer;
 import net.minecraft.client.renderer.entity.state.VillagerRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.entity.npc.villager.Villager;
-import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.level.Level;
 import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.joml.Quaternionf;
@@ -72,7 +69,24 @@ public class VillagerDeedScreen extends Screen {
             Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_off_highlighted");
     private static final Identifier TOGGLE_DEED_DISABLED =
             Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_disabled");
-
+    private static final Identifier LOCK_TEXTURE =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/lockbutton");
+    private static final Identifier LOCK_TEXTURE_HIGHLIGHT =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/lockbutton_highlighted");
+    private static final Identifier LOCK_TEXTURE_OFF =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/unlockbutton");
+    private static final Identifier LOCK_TEXTURE_OFF_HIGHLIGHT =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/unlockbutton_highlighted");
+    private static final Identifier LOCK_TEXTURE_DISABLED =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/lockbutton_disabled");
+    private static final Identifier LOCK_TEXTURE_OFF_DISABLED =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/unlockbutton_disabled");
+    private static final Identifier SUBSCRIBE_TEXTURE =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/subscribebutton_enabled");
+    private static final Identifier SUBSCRIBE_TEXTURE_OFF =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/subscribebutton");
+    private static final Identifier SUBSCRIBE_TEXTURE_HIGHLIGHT =
+            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/subscribebutton_highlighted");
 
     private final int imageWidth = 176;
     private final int imageHeight = 113;
@@ -81,14 +95,15 @@ public class VillagerDeedScreen extends Screen {
     private EditBox tenantNameEdit;
 
     private ToggleActiveButton toggleActiveButton;
+    private ToggleLockButton toggleLockButton;
+    private ToggleSubscriptionButton toggleSubscriptionButton;
+
     private EvictButton evictButton;
     private SummonButton summonButton;
     private SwapProfessionButton swapProfessionButton;
 
     private ConfirmDeedNameButton confirmDeedNameButton;
     private ConfirmTenantNameButton confirmTenantNameButton;
-
-    private CycleButton<ResourceKey<VillagerProfession>> professionButton;
 
     private final VillagerDeedBlockEntity blockEntity;
     private final VillagerRenderState villagerRenderState = new VillagerRenderState();
@@ -116,6 +131,9 @@ public class VillagerDeedScreen extends Screen {
         this.addRenderableWidget(this.tenantNameEdit);
 
         this.toggleActiveButton = this.addRenderableWidget(new ToggleActiveButton(x + 10, y + 83));
+        this.toggleLockButton = this.addRenderableWidget(new ToggleLockButton(x + 128, y + 83));
+        this.toggleSubscriptionButton = this.addRenderableWidget(new ToggleSubscriptionButton(x + 146, y + 83));
+
         this.evictButton = this.addRenderableWidget(new EvictButton(x + 38, y + 83));
         this.summonButton = this.addRenderableWidget(new SummonButton(x + 56, y + 83));
         this.swapProfessionButton = this.addRenderableWidget(new SwapProfessionButton(x + 74, y + 83));
@@ -166,7 +184,49 @@ public class VillagerDeedScreen extends Screen {
             }
         }
 
+        UUID playerUUID = (this.minecraft != null && this.minecraft.player != null) ? this.minecraft.player.getUUID() : null;
+        UUID ownerUUID = this.blockEntity.getOwnerUUID();
+        boolean isLocked = this.blockEntity.getLocked();
+        boolean isUnauthorized = isLocked && (playerUUID == null || !playerUUID.equals(ownerUUID));
+
+        if (isUnauthorized) {
+            if (this.deedNameEdit != null) {
+                this.deedNameEdit.active = false;
+                this.deedNameEdit.setEditable(false);
+            }
+            if (this.tenantNameEdit != null) {
+                this.tenantNameEdit.active = false;
+                this.tenantNameEdit.setEditable(false);
+            }
+            if (this.toggleActiveButton != null) this.toggleActiveButton.active = false;
+            if (this.toggleLockButton != null) this.toggleLockButton.active = false;
+            if (this.evictButton != null) this.evictButton.active = false;
+            if (this.summonButton != null) this.summonButton.active = false;
+            if (this.swapProfessionButton != null) this.swapProfessionButton.active = false;
+            if (this.confirmDeedNameButton != null) this.confirmDeedNameButton.active = false;
+            if (this.confirmTenantNameButton != null) this.confirmTenantNameButton.active = false;
+
+            if (this.toggleSubscriptionButton != null) {
+                this.toggleSubscriptionButton.active = true;
+            }
+            return;
+        }
+
         int state = this.blockEntity.getDeedState();
+
+        if (this.deedNameEdit != null) {
+            this.deedNameEdit.active = true;
+            this.deedNameEdit.setEditable(true);
+        }
+        if (this.confirmDeedNameButton != null) {
+            this.confirmDeedNameButton.active = true;
+        }
+        if (this.toggleLockButton != null) {
+            this.toggleLockButton.active = playerUUID != null && playerUUID.equals(ownerUUID);
+        }
+        if (this.toggleSubscriptionButton != null) {
+            this.toggleSubscriptionButton.active = true;
+        }
 
         if (this.toggleActiveButton != null) {
             this.toggleActiveButton.active = (state == 0 || state == 1 || state == 4);
@@ -353,6 +413,74 @@ public class VillagerDeedScreen extends Screen {
         @Override
         public void onPress(InputWithModifiers input) {
             ClientPacketDistributor.sendToServer(new ToggleDeedPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
+        }
+
+        @Override
+        public void updateWidgetNarration(NarrationElementOutput output) {
+            this.defaultButtonNarrationText(output);
+        }
+    }
+
+    private class ToggleLockButton extends AbstractButton {
+        public ToggleLockButton(int x, int y) {
+            super(x, y, 16, 16, Component.translatable("gui.villagerdeed.button.toggle_lock"));
+            this.setTooltip(Tooltip.create(this.getMessage()));
+        }
+
+        private Identifier getSprite() {
+            boolean isLocked = VillagerDeedScreen.this.blockEntity.getLocked();
+            boolean hovered = this.active && this.isHovered();
+
+            if (!this.active) {
+                return isLocked ? LOCK_TEXTURE_DISABLED : LOCK_TEXTURE_OFF_DISABLED;
+            }
+            if (!isLocked) {
+                return hovered ? LOCK_TEXTURE_OFF_HIGHLIGHT : LOCK_TEXTURE_OFF;
+            }
+            return hovered ? LOCK_TEXTURE_HIGHLIGHT : LOCK_TEXTURE;
+        }
+
+        @Override
+        public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getSprite(), this.getX(), this.getY(), this.width, this.height);
+        }
+
+        @Override
+        public void onPress(InputWithModifiers input) {
+            ClientPacketDistributor.sendToServer(new ToggleLockPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
+        }
+
+        @Override
+        public void updateWidgetNarration(NarrationElementOutput output) {
+            this.defaultButtonNarrationText(output);
+        }
+    }
+
+    private class ToggleSubscriptionButton extends AbstractButton {
+        public ToggleSubscriptionButton(int x, int y) {
+            super(x, y, 16, 16, Component.translatable("gui.villagerdeed.button.subscribe"));
+            this.setTooltip(Tooltip.create(this.getMessage()));
+        }
+
+        private Identifier getSprite() {
+            UUID playerUUID = (Minecraft.getInstance().player != null) ? Minecraft.getInstance().player.getUUID() : null;
+            boolean isSubscribed = playerUUID != null && VillagerDeedScreen.this.blockEntity.playerIsSubscribed(playerUUID);
+            boolean hovered = this.active && this.isHovered();
+
+            if (isSubscribed) {
+                return hovered ? SUBSCRIBE_TEXTURE_HIGHLIGHT : SUBSCRIBE_TEXTURE;
+            }
+            return hovered ? SUBSCRIBE_TEXTURE_HIGHLIGHT : SUBSCRIBE_TEXTURE_OFF;
+        }
+
+        @Override
+        public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
+            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getSprite(), this.getX(), this.getY(), this.width, this.height);
+        }
+
+        @Override
+        public void onPress(InputWithModifiers input) {
+            ClientPacketDistributor.sendToServer(new ToggleSubscriptionPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
 
         @Override

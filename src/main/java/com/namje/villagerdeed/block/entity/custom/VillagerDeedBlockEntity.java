@@ -1,5 +1,6 @@
 package com.namje.villagerdeed.block.entity.custom;
 
+import com.mojang.serialization.Codec;
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.ModBlockEntities;
 import net.minecraft.core.*;
@@ -12,6 +13,7 @@ import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.ProblemReporter;
@@ -36,9 +38,7 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 public class VillagerDeedBlockEntity extends BlockEntity {
     private static final List<String> TENANT_NAMES = List.of(
@@ -60,8 +60,8 @@ public class VillagerDeedBlockEntity extends BlockEntity {
     public static final int MAX_MOVE_IN_TIME = 120;
     public static final double MAX_LEASH_DISTANCE = 16.0;
     public static final double HARD_TELEPORT_DISTANCE = 32.0;
-    public static final int TENANT_UPD_TIME = 1200;
-    public static final int TENANT_LOGIC_TIME = 200;
+    public static final int TENANT_UPD_TIME = 600;
+    public static final int TENANT_LOGIC_TIME = 100;
 
     /*
     0 = invalid, either due to no bed or other means; no functionality running
@@ -76,10 +76,15 @@ public class VillagerDeedBlockEntity extends BlockEntity {
     private String deedName = "";
     private String tenantName = "";
 
+    private boolean locked = false;
     private @Nullable UUID ownerUUID;
     private @Nullable BlockPos bedPos;
     private @Nullable EntityReference<LivingEntity> tenant;
     private @Nullable CompoundTag tenantData;
+
+    private final Set<UUID> subscribedPlayers = new HashSet<>();
+    private static final Codec<List<UUID>> UUID_LIST_CODEC = Codec.list(UUIDUtil.CODEC);
+
     private ResourceKey<VillagerProfession> tenantProfession = VillagerProfession.NONE;
     private final ContainerData data;
 
@@ -110,6 +115,9 @@ public class VillagerDeedBlockEntity extends BlockEntity {
             }
         };
     }
+
+    public boolean getLocked() { return this.locked; }
+    public void setLocked(boolean locked) { this.locked = locked; }
 
     public String getDeedName() {
         if (this.deedName.isBlank()) {
@@ -164,6 +172,45 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         if (this.deedState != state) {
             this.deedState = state;
             this.setChanged();
+        }
+    }
+
+    public boolean playerIsSubscribed(UUID playerUUID) {
+        return this.subscribedPlayers.contains(playerUUID);
+    }
+
+    public void subscribePlayer(UUID playerUUID) {
+        if (this.subscribedPlayers.add(playerUUID)) {
+            VillagerDeed.LOGGER.info("subscribed player: " + playerUUID.toString());
+            this.markUpdated();
+        }
+    }
+
+    public void unsubscribePlayer(UUID playerUUID) {
+        if (this.subscribedPlayers.remove(playerUUID)) {
+            VillagerDeed.LOGGER.info("unsubscribed player: " + playerUUID.toString());
+            this.markUpdated();
+        }
+    }
+
+    public void toggleSubscription(UUID playerUUID) {
+        if (this.playerIsSubscribed(playerUUID)) {
+            this.unsubscribePlayer(playerUUID);
+        } else {
+            this.subscribePlayer(playerUUID);
+        }
+    }
+
+    private void notifySubscribers(ServerLevel level, Component message) {
+        if (this.subscribedPlayers.isEmpty()) {
+            return;
+        }
+        VillagerDeed.LOGGER.info("logging msg to subscribers: " + message.toString());
+        for (UUID uuid : this.subscribedPlayers) {
+            ServerPlayer player = level.getServer().getPlayerList().getPlayer(uuid);
+            if (player != null) {
+                player.sendSystemMessage(message);
+            }
         }
     }
 
@@ -401,10 +448,14 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         if (this.level == null || !(this.level instanceof ServerLevel serverLevel)) return;
         Brain<Villager> brain = tenant.getBrain();
 
+        VillagerDeed.LOGGER.info(brain.getActiveActivities().toString());
+
         if (!brain.isActive(Activity.WORK)) {
+            VillagerDeed.LOGGER.info("not working, dont move");
             return;
         }
 
+        VillagerDeed.LOGGER.info("move villager to deed");
         brain.stopAll(serverLevel, tenant);
 
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
@@ -451,20 +502,14 @@ public class VillagerDeedBlockEntity extends BlockEntity {
                 tenant.load(input);
                 VillagerDeed.LOGGER.info("existing tenant data detected: attempting to load data");
 
-                //display msg to block owner if they exist
-                Player owner = this.getOwnerPlayer(level);
-                if (owner != null) {
-                    owner.sendSystemMessage(Component.translatable("block.villagerdeed.namje_villagerdeed.respawned", this.getTenantName(), this.getDeedName()));
-                }
+                notifySubscribers(level, Component.translatable("block.villagerdeed.namje_villagerdeed.respawned",
+                        this.getTenantName(), this.getDeedName()));
             }
         } else {
             this.tenantName = TENANT_NAMES.get(level.getRandom().nextInt(TENANT_NAMES.size()));
 
-            //display msg to block owner if they exist
-            Player owner = this.getOwnerPlayer(level);
-            if (owner != null) {
-                owner.sendSystemMessage(Component.translatable("block.villagerdeed.namje_villagerdeed.moved_in", this.getTenantName(), this.getDeedName()));
-            }
+            notifySubscribers(level, Component.translatable("block.villagerdeed.namje_villagerdeed.moved_in",
+                    this.getTenantName(), this.getDeedName()));
 
             List<VillagerProfession> professions = getProfessions();
             if (!professions.isEmpty()) {
@@ -521,6 +566,11 @@ public class VillagerDeedBlockEntity extends BlockEntity {
 
     public void evictTenant(Level level) {
         if (level instanceof ServerLevel serverLevel) {
+            if (this.tenant != null) {
+                notifySubscribers(serverLevel, Component.translatable("block.villagerdeed.namje_villagerdeed.evicted",
+                        this.getTenantName(), this.getDeedName()));
+            }
+
             cleanupTenant(serverLevel);
             this.tenant = null;
             this.tenantData = null;
@@ -535,6 +585,11 @@ public class VillagerDeedBlockEntity extends BlockEntity {
     public void onCleanup(Level level) {
         if (level instanceof ServerLevel serverLevel) {
             cleanupTenant(level);
+
+            if (this.tenant != null) {
+                notifySubscribers(serverLevel, Component.translatable("block.villagerdeed.namje_villagerdeed.destroyed",
+                        this.getDeedName(), this.getTenantName()));
+            }
 
             if (this.bedPos != null) {
                 if (serverLevel.getBlockState(this.bedPos).getBlock() instanceof BedBlock) {
@@ -561,6 +616,7 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         output.putInt("MoveInTime", this.moveInTime);
         output.putString("DeedName", this.deedName);
         output.putString("tenantName", this.tenantName);
+        output.putBoolean("Locked", this.locked);
         EntityReference.store(this.tenant, output, "BoundTenant");
 
         if (this.bedPos != null) {
@@ -573,6 +629,10 @@ public class VillagerDeedBlockEntity extends BlockEntity {
 
         if (this.ownerUUID != null) {
             output.store("OwnerUUID", UUIDUtil.CODEC, this.ownerUUID);
+        }
+
+        if (!this.subscribedPlayers.isEmpty()) {
+            output.store("SubscribedPlayers", UUID_LIST_CODEC, List.copyOf(this.subscribedPlayers));
         }
     }
 
@@ -587,6 +647,9 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         this.bedPos = input.read("BedPos", BlockPos.CODEC).orElse(null);
         this.tenantData = input.read("TenantData", CompoundTag.CODEC).orElse(null);
         this.ownerUUID = input.read("OwnerUUID", UUIDUtil.CODEC).orElse(null);
+        this.locked = input.getBooleanOr("Locked", false);
+        this.subscribedPlayers.clear();
+        input.read("SubscribedPlayers", UUID_LIST_CODEC).ifPresent(this.subscribedPlayers::addAll);
     }
 
     @Override

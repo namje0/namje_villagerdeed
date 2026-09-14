@@ -1,5 +1,6 @@
 package com.namje.villagerdeed.networking;
 
+import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
 import com.namje.villagerdeed.networking.packet.*;
 import net.minecraft.core.BlockPos;
@@ -11,7 +12,11 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+import java.util.UUID;
+
 public class ClientPayloadHandler {
+    //TODO: sanity check player UUID and if locked + not owner uuid, return early
+
     // server
     public static void handleToggleDeedPacket(ToggleDeedPacketC2S packet, IPayloadContext context) {
         ServerPlayer player = (ServerPlayer) context.player();
@@ -22,6 +27,34 @@ public class ClientPayloadHandler {
         if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedBlockEntity) {
             deedBlockEntity.toggleDeedAvailability();
             deedBlockEntity.markUpdated();
+        }
+    }
+
+    public static void handleToggleLockPacket(ToggleLockPacketC2S packet, IPayloadContext context) {
+        ServerPlayer player = (ServerPlayer) context.player();
+        ServerLevel level = (ServerLevel) context.player().level();
+        BlockPos pos = packet.pos();
+
+        // TODO: sanity check position
+        if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedBlockEntity) {
+            UUID playerUUID = player.getUUID();
+            UUID ownerUUID = deedBlockEntity.getOwnerUUID();
+
+            if (ownerUUID != null && ownerUUID.equals(playerUUID)) {
+                deedBlockEntity.setLocked(!deedBlockEntity.getLocked());
+                deedBlockEntity.markUpdated();
+            }
+        }
+    }
+
+    public static void handleToggleSubscriptionPacket(ToggleSubscriptionPacketC2S packet, IPayloadContext context) {
+        ServerPlayer player = (ServerPlayer) context.player();
+        ServerLevel level = (ServerLevel) context.player().level();
+        BlockPos pos = packet.pos();
+
+        // TODO: sanity check position
+        if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedBlockEntity) {
+            deedBlockEntity.toggleSubscription(player.getUUID());
         }
     }
 

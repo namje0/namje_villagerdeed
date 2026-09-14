@@ -24,14 +24,19 @@ public class ModEvents {
         registrar.playToServer(EvictTenantPacketC2S.TYPE,
                 EvictTenantPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleEvictTenantPacket);
 
-
         registrar.playToServer(ChangeDeedNamePacketC2S.TYPE,
                 ChangeDeedNamePacketC2S.STREAM_CODEC, ClientPayloadHandler::handleChangeDeedNamePacket);
 
         registrar.playToServer(ChangeTenantNamePacketC2S.TYPE,
                 ChangeTenantNamePacketC2S.STREAM_CODEC, ClientPayloadHandler::handleChangeTenantNamePacket);
+
         registrar.playToServer(SwapTenantProfessionPacketC2S.TYPE,
                 SwapTenantProfessionPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleSwapTenantProfessionPacket);
 
+        registrar.playToServer(ToggleLockPacketC2S.TYPE,
+                ToggleLockPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleToggleLockPacket);
+
+        registrar.playToServer(ToggleSubscriptionPacketC2S.TYPE,
+                ToggleSubscriptionPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleToggleSubscriptionPacket);
     }
 }
