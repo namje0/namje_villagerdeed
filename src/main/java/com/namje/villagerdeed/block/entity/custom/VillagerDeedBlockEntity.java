@@ -58,7 +58,9 @@ public class VillagerDeedBlockEntity extends BlockEntity {
             "Thomas", "Sarah", "Charles", "Karen", "Stanford", "Stanley", "Mabel", "Dipper",
             "Carmen", "Angela", "Roland", "Gebura", "Hod", "Elijah", "Garion", "Xiao",
             "Yuuri", "Chito", "Irina", "Rin", "Nadeshiko", "Mono", "Tich", "Soos",
-            "Wendy", "Diana", "Kinzo", "Saya", "Madotsuki", "Kai", "TESTIFICATE"
+            "Wendy", "Diana", "Kinzo", "Saya", "Madotsuki", "Kai", "TESTIFICATE", "Silence",
+            "Kristen", "Saria", "Mumu", "Dorothy", "Ifrit", "Magallan", "Ling", "Jie",
+            "Shu", "Nian", "Lee", "Aak", "Fu", "Fliss", "Ina"
     );
 
     public static final int MAX_MOVE_IN_TIME = 120;
