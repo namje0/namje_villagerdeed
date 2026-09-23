@@ -63,7 +63,9 @@ public class VillagerDeedBlockEntity extends BlockEntity {
             "Shu", "Nian", "Lee", "Aak", "Fu", "Fliss", "Ina"
     );
 
-    public static final int MAX_MOVE_IN_TIME = 120;
+    public static final int MIN_MOVE_IN_TIME = 600;
+    public static final int MAX_MOVE_IN_TIME = 2400;
+    public static final int RESPAWN_TIME = 120;
     public static final double MAX_LEASH_DISTANCE = 16.0;
     public static final double HARD_TELEPORT_DISTANCE = 32.0;
     public static final int TENANT_UPD_TIME = 600;
@@ -78,6 +80,7 @@ public class VillagerDeedBlockEntity extends BlockEntity {
      */
     private int deedState = 0;
 
+    private int nextMoveInTime = 0;
     private int moveInTime = 0;
     private String deedName = "";
     private String tenantName = "";
@@ -378,6 +381,7 @@ public class VillagerDeedBlockEntity extends BlockEntity {
                 activeTenant.setCustomName(Component.literal(entity.getTenantName()));
             }
 
+            entity.nextMoveInTime = 0;
             entity.moveInTime = 0;
 
             if (serverLevel.getGameTime() % TENANT_LOGIC_TIME == 0) {
@@ -394,8 +398,15 @@ public class VillagerDeedBlockEntity extends BlockEntity {
                 entity.setDeedState(targetState);
             }
 
+            if (entity.nextMoveInTime == 0 && entity.tenantData == null) {
+                entity.nextMoveInTime = level.getRandom().nextIntBetweenInclusive(MIN_MOVE_IN_TIME, MAX_MOVE_IN_TIME);
+                VillagerDeed.LOGGER.info("next move in time for a new tenant: " + entity.nextMoveInTime);
+            }
+
             entity.moveInTime++;
-            if (entity.moveInTime >= MAX_MOVE_IN_TIME) {
+
+            int nextSpawnTime = (entity.tenantData == null) ? entity.nextMoveInTime : RESPAWN_TIME;
+            if (entity.moveInTime >= nextSpawnTime) {
                 if (entity.spawnTenant(serverLevel, pos)) {
                     entity.moveInTime = 0;
                     entity.setDeedState(2);
