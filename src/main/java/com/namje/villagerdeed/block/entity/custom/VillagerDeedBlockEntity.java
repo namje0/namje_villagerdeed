@@ -190,14 +190,12 @@ public class VillagerDeedBlockEntity extends BlockEntity {
 
     public void subscribePlayer(UUID playerUUID) {
         if (this.subscribedPlayers.add(playerUUID)) {
-            VillagerDeed.LOGGER.info("subscribed player: " + playerUUID.toString());
             this.markUpdated();
         }
     }
 
     public void unsubscribePlayer(UUID playerUUID) {
         if (this.subscribedPlayers.remove(playerUUID)) {
-            VillagerDeed.LOGGER.info("unsubscribed player: " + playerUUID.toString());
             this.markUpdated();
         }
     }
@@ -214,7 +212,6 @@ public class VillagerDeedBlockEntity extends BlockEntity {
         if (this.subscribedPlayers.isEmpty()) {
             return;
         }
-        VillagerDeed.LOGGER.info("logging msg to subscribers: " + message.toString());
         for (UUID uuid : this.subscribedPlayers) {
             ServerPlayer player = level.getServer().getPlayerList().getPlayer(uuid);
             if (player != null) {
@@ -400,7 +397,6 @@ public class VillagerDeedBlockEntity extends BlockEntity {
 
             if (entity.nextMoveInTime == 0 && entity.tenantData == null) {
                 entity.nextMoveInTime = level.getRandom().nextIntBetweenInclusive(MIN_MOVE_IN_TIME, MAX_MOVE_IN_TIME);
-                VillagerDeed.LOGGER.info("next move in time for a new tenant: " + entity.nextMoveInTime);
             }
 
             entity.moveInTime++;
@@ -425,7 +421,6 @@ public class VillagerDeedBlockEntity extends BlockEntity {
                 deedPos.getY(), deedPos.getZ() + 0.5);
 
         if (distSqr > HARD_TELEPORT_DISTANCE * HARD_TELEPORT_DISTANCE) {
-            VillagerDeed.LOGGER.info("tenant far from deed; teleport to it");
             tenant.teleportTo(deedPos.getX() + 0.5, deedPos.getY() + 1.0, deedPos.getZ() + 0.5);
             tenant.getNavigation().stop();
             return;
@@ -515,7 +510,6 @@ public class VillagerDeedBlockEntity extends BlockEntity {
             try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(this.problemPath(), VillagerDeed.LOGGER)) {
                 ValueInput input = TagValueInput.create(reporter, level.registryAccess(), this.tenantData);
                 tenant.load(input);
-                VillagerDeed.LOGGER.info("existing tenant data detected: attempting to load data");
 
                 notifySubscribers(level, Component.translatable("block.villagerdeed.namje_villagerdeed.respawned",
                         this.getTenantName(), this.getDeedName()));
@@ -584,7 +578,6 @@ public class VillagerDeedBlockEntity extends BlockEntity {
             level.sendParticles(ParticleTypes.POOF, tenantPos.x(), tenantPos.y() + 0.5, tenantPos.z(), 20, 0.25, 0.25, 0.25, 0.05);
 
             level.sendBlockUpdated(pos, getBlockState(), getBlockState(), 3);
-            VillagerDeed.LOGGER.info("tenant created/restored and bound to deed");
 
             return true;
         }
