@@ -1,0 +1,34 @@
+{
+  "block.villagerdeed.namje_villagerdeed": "Villager Deed",
+  "block.villagerdeed.namje_villagerdeed.occupied": "This bed already has a villager deed attached to it",
+
+  "block.villagerdeed.namje_villagerdeed.moved_in": "%s has moved into %s",
+  "block.villagerdeed.namje_villagerdeed.respawned": "%s has respawned at %s",
+  "block.villagerdeed.namje_villagerdeed.tenant_died": "%s of %s has died",
+  "block.villagerdeed.namje_villagerdeed.evicted": "%s was evicted from %s",
+  "block.villagerdeed.namje_villagerdeed.changed_profession": "%s had their profession changed to %s",
+  "block.villagerdeed.namje_villagerdeed.destroyed": "The deed at %s was destroyed, and %s has moved out",
+
+  "gui.villagerdeed.state.invalid": "This deed is invalid",
+  "gui.villagerdeed.state.no_bed": "Place the deed by the head of a bed to activate it",
+  "gui.villagerdeed.state.waiting": "Waiting for a villager to move in",
+  "gui.villagerdeed.state.respawning": "Villager is currently respawning",
+  "gui.villagerdeed.state.disabled": "This deed is disabled",
+  "gui.villagerdeed.state.tenantData": "Health: %s",
+  "gui.villagerdeed.profession": "Choose Profession",
+  "gui.villagerdeed.deed_name": "Deed Name",
+  "gui.villagerdeed.tenant_name": "Tenant Name",
+
+  "gui.villagerdeed.button.evict": "Evict Tenant",
+  "gui.villagerdeed.button.toggle_active": "Toggle Deed Availability",
+  "gui.villagerdeed.button.summon": "Summon Tenant",
+  "gui.villagerdeed.button.swap_profession": "Change Tenant Profession",
+  "gui.villagerdeed.button.restrict_access": "Restrict Deed Access",
+  "gui.villagerdeed.button.confirm_deed": "Confirm Deed Name",
+  "gui.villagerdeed.button.confirm_tenant": "Confirm Tenant Name",
+  "gui.villagerdeed.button.toggle_lock": "Restrict Deed To Owner",
+  "gui.villagerdeed.button.subscribe": "Toggle Deed Notifications",
+
+  "gui.villagerdeed.button.range": "Range Limit",
+  "gui.villagerdeed.button.profession": "Profession"
+}
