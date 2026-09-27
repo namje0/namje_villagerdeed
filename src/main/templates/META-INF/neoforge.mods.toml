@@ -40,7 +40,7 @@ authors="namje"
 
 # The description text for the mod (multi line!) (#mandatory)
 description='''
-villager deed thingy
+A mod that adds deed blocks, allowing villagers to move in and respawn at them while preserving their names, jobs, trades, and experience.
 '''
 
 # The [[mixins]] block allows you to declare your mixin config to FML so that it gets loaded.
