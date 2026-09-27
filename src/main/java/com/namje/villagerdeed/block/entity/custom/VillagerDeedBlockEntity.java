@@ -454,12 +454,14 @@ public class VillagerDeedBlockEntity extends BlockEntity {
     private static void stopVillagerMemory(Villager tenant, ServerLevel serverLevel, Brain<Villager> brain) {
         brain.stopAll(serverLevel, tenant);
 
+        brain.setActiveActivityIfPossible(Activity.IDLE);
         brain.eraseMemory(MemoryModuleType.WALK_TARGET);
         brain.eraseMemory(MemoryModuleType.PATH);
         brain.eraseMemory(MemoryModuleType.LOOK_TARGET);
         brain.eraseMemory(MemoryModuleType.INTERACTION_TARGET);
         brain.eraseMemory(MemoryModuleType.BREED_TARGET);
         brain.eraseMemory(MemoryModuleType.ATTACK_TARGET);
+        brain.eraseMemory(MemoryModuleType.CANT_REACH_WALK_TARGET_SINCE);
     }
 
     private void snapshotTenantData(Villager tenant) {

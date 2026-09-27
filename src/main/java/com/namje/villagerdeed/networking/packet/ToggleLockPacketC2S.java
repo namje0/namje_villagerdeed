@@ -1,26 +1,14 @@
 package com.namje.villagerdeed.networking.packet;
 
-import com.namje.villagerdeed.VillagerDeed;
 import net.minecraft.core.BlockPos;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.Identifier;
+import net.minecraft.network.FriendlyByteBuf;
 
-public record ToggleLockPacketC2S(BlockPos pos) implements CustomPacketPayload {
-    public static final Type<ToggleLockPacketC2S> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "namje_toggle_lock_packet"));
+public record ToggleLockPacketC2S(BlockPos pos) {
+    public static void encode(ToggleLockPacketC2S packet, FriendlyByteBuf buf) {
+        buf.writeBlockPos(packet.pos());
+    }
 
-    public static final StreamCodec<RegistryFriendlyByteBuf, ToggleLockPacketC2S> STREAM_CODEC =
-            StreamCodec.composite(
-                    BlockPos.STREAM_CODEC,
-                    ToggleLockPacketC2S::pos,
-
-                    ToggleLockPacketC2S::new
-            );
-
-    @Override
-    public Type<? extends CustomPacketPayload> type() {
-        return TYPE;
+    public static ToggleLockPacketC2S decode(FriendlyByteBuf buf) {
+        return new ToggleLockPacketC2S(buf.readBlockPos());
     }
 }

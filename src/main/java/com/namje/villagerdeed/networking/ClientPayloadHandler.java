@@ -1,26 +1,23 @@
 package com.namje.villagerdeed.networking;
 
-import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
 import com.namje.villagerdeed.networking.packet.*;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityTypes;
-import net.minecraft.world.entity.npc.villager.VillagerProfession;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraftforge.network.NetworkEvent;
 
 import java.util.UUID;
+import java.util.function.Supplier;
 
 public class ClientPayloadHandler {
     //TODO: sanity check player UUID and if locked + not owner uuid, return early
 
     // server
-    public static void handleToggleDeedPacket(ToggleDeedPacketC2S packet, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        ServerLevel level = (ServerLevel) context.player().level();
+    public static void handleToggleDeedPacket(ToggleDeedPacketC2S packet, Supplier<NetworkEvent.Context> context) {
+        ServerPlayer player = context.get().getSender();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos pos = packet.pos();
 
         // TODO: sanity check position
@@ -30,9 +27,9 @@ public class ClientPayloadHandler {
         }
     }
 
-    public static void handleToggleLockPacket(ToggleLockPacketC2S packet, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        ServerLevel level = (ServerLevel) context.player().level();
+    public static void handleToggleLockPacket(ToggleLockPacketC2S packet, Supplier<NetworkEvent.Context> context) {
+        ServerPlayer player = context.get().getSender();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos pos = packet.pos();
 
         // TODO: sanity check position
@@ -47,9 +44,9 @@ public class ClientPayloadHandler {
         }
     }
 
-    public static void handleToggleSubscriptionPacket(ToggleSubscriptionPacketC2S packet, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        ServerLevel level = (ServerLevel) context.player().level();
+    public static void handleToggleSubscriptionPacket(ToggleSubscriptionPacketC2S packet, Supplier<NetworkEvent.Context> context) {
+        ServerPlayer player = context.get().getSender();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos pos = packet.pos();
 
         // TODO: sanity check position
@@ -58,9 +55,9 @@ public class ClientPayloadHandler {
         }
     }
 
-    public static void handleSummonTenantPacket(SummonTenantPacketC2S packet, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        ServerLevel level = (ServerLevel) context.player().level();
+    public static void handleSummonTenantPacket(SummonTenantPacketC2S packet, Supplier<NetworkEvent.Context> context) {
+        ServerPlayer player = context.get().getSender();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos pos = packet.pos();
 
         // TODO: sanity check position
@@ -69,9 +66,9 @@ public class ClientPayloadHandler {
         }
     }
 
-    public static void handleEvictTenantPacket(EvictTenantPacketC2S packet, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        ServerLevel level = (ServerLevel) context.player().level();
+    public static void handleEvictTenantPacket(EvictTenantPacketC2S packet, Supplier<NetworkEvent.Context> context) {
+        ServerPlayer player = context.get().getSender();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos pos = packet.pos();
 
         // TODO: sanity check position
@@ -80,9 +77,9 @@ public class ClientPayloadHandler {
         }
     }
 
-    public static void handleChangeDeedNamePacket(ChangeDeedNamePacketC2S packet, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        ServerLevel level = (ServerLevel) context.player().level();
+    public static void handleChangeDeedNamePacket(ChangeDeedNamePacketC2S packet, Supplier<NetworkEvent.Context> context) {
+        ServerPlayer player = context.get().getSender();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos pos = packet.pos();
         String name = packet.name();
 
@@ -93,9 +90,9 @@ public class ClientPayloadHandler {
         }
     }
 
-    public static void handleChangeTenantNamePacket(ChangeTenantNamePacketC2S packet, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        ServerLevel level = (ServerLevel) context.player().level();
+    public static void handleChangeTenantNamePacket(ChangeTenantNamePacketC2S packet, Supplier<NetworkEvent.Context> context) {
+        ServerPlayer player = context.get().getSender();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos pos = packet.pos();
         String name = packet.name();
 
@@ -106,18 +103,16 @@ public class ClientPayloadHandler {
         }
     }
 
-    public static void handleSwapTenantProfessionPacket(SwapTenantProfessionPacketC2S packet, IPayloadContext context) {
-        ServerPlayer player = (ServerPlayer) context.player();
-        ServerLevel level = (ServerLevel) context.player().level();
+    public static void handleSwapTenantProfessionPacket(SwapTenantProfessionPacketC2S packet, Supplier<NetworkEvent.Context> context) {
+        ServerPlayer player = context.get().getSender();
+        ServerLevel level = (ServerLevel) player.level();
         BlockPos pos = packet.pos();
         VillagerProfession profession = packet.profession();
 
         // TODO: sanity check position
         if (level.getBlockEntity(pos) instanceof VillagerDeedBlockEntity deedBlockEntity) {
-            BuiltInRegistries.VILLAGER_PROFESSION.getResourceKey(profession).ifPresent(key -> {
-                deedBlockEntity.setTenantProfession(key);
-                deedBlockEntity.markUpdated();
-            });
+            deedBlockEntity.setTenantProfession(profession);
+            deedBlockEntity.markUpdated();
         }
     }
 }

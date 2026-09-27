@@ -3,40 +3,76 @@ package com.namje.villagerdeed.event;
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.networking.ClientPayloadHandler;
 import com.namje.villagerdeed.networking.packet.*;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.registration.HandlerThread;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.network.NetworkRegistry;
+import net.minecraftforge.network.simple.SimpleChannel;
 
-@EventBusSubscriber(modid = VillagerDeed.MODID)
+@Mod.EventBusSubscriber(modid = VillagerDeed.MODID, bus = Mod.EventBusSubscriber.Bus.MOD)
 public class ModEvents {
+    private static final String PROTOCOL_VERSION = "1";
+
+    public static final SimpleChannel CHANNEL = NetworkRegistry.ChannelBuilder
+            .named(new ResourceLocation(VillagerDeed.MODID, "main"))
+            .networkProtocolVersion(() -> PROTOCOL_VERSION)
+            .clientAcceptedVersions(PROTOCOL_VERSION::equals)
+            .serverAcceptedVersions(PROTOCOL_VERSION::equals)
+            .simpleChannel();
+
     @SubscribeEvent
-    public static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        final PayloadRegistrar registrar = event.registrar("1").executesOn(HandlerThread.MAIN);
+    public static void registerPayloads(FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            int id = 0;
 
-        registrar.playToServer(ToggleDeedPacketC2S.TYPE,
-                ToggleDeedPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleToggleDeedPacket);
+            CHANNEL.messageBuilder(ToggleDeedPacketC2S.class, id++)
+                    .encoder(ToggleDeedPacketC2S::encode)
+                    .decoder(ToggleDeedPacketC2S::decode)
+                    .consumerMainThread(ClientPayloadHandler::handleToggleDeedPacket)
+                    .add();
 
-        registrar.playToServer(SummonTenantPacketC2S.TYPE,
-                SummonTenantPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleSummonTenantPacket);
+            CHANNEL.messageBuilder(SummonTenantPacketC2S.class, id++)
+                    .encoder(SummonTenantPacketC2S::encode)
+                    .decoder(SummonTenantPacketC2S::decode)
+                    .consumerMainThread(ClientPayloadHandler::handleSummonTenantPacket)
+                    .add();
 
-        registrar.playToServer(EvictTenantPacketC2S.TYPE,
-                EvictTenantPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleEvictTenantPacket);
+            CHANNEL.messageBuilder(EvictTenantPacketC2S.class, id++)
+                    .encoder(EvictTenantPacketC2S::encode)
+                    .decoder(EvictTenantPacketC2S::decode)
+                    .consumerMainThread(ClientPayloadHandler::handleEvictTenantPacket)
+                    .add();
 
-        registrar.playToServer(ChangeDeedNamePacketC2S.TYPE,
-                ChangeDeedNamePacketC2S.STREAM_CODEC, ClientPayloadHandler::handleChangeDeedNamePacket);
+            CHANNEL.messageBuilder(ChangeDeedNamePacketC2S.class, id++)
+                    .encoder(ChangeDeedNamePacketC2S::encode)
+                    .decoder(ChangeDeedNamePacketC2S::decode)
+                    .consumerMainThread(ClientPayloadHandler::handleChangeDeedNamePacket)
+                    .add();
 
-        registrar.playToServer(ChangeTenantNamePacketC2S.TYPE,
-                ChangeTenantNamePacketC2S.STREAM_CODEC, ClientPayloadHandler::handleChangeTenantNamePacket);
+            CHANNEL.messageBuilder(ChangeTenantNamePacketC2S.class, id++)
+                    .encoder(ChangeTenantNamePacketC2S::encode)
+                    .decoder(ChangeTenantNamePacketC2S::decode)
+                    .consumerMainThread(ClientPayloadHandler::handleChangeTenantNamePacket)
+                    .add();
 
-        registrar.playToServer(SwapTenantProfessionPacketC2S.TYPE,
-                SwapTenantProfessionPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleSwapTenantProfessionPacket);
+            CHANNEL.messageBuilder(SwapTenantProfessionPacketC2S.class, id++)
+                    .encoder(SwapTenantProfessionPacketC2S::encode)
+                    .decoder(SwapTenantProfessionPacketC2S::decode)
+                    .consumerMainThread(ClientPayloadHandler::handleSwapTenantProfessionPacket)
+                    .add();
 
-        registrar.playToServer(ToggleLockPacketC2S.TYPE,
-                ToggleLockPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleToggleLockPacket);
+            CHANNEL.messageBuilder(ToggleLockPacketC2S.class, id++)
+                    .encoder(ToggleLockPacketC2S::encode)
+                    .decoder(ToggleLockPacketC2S::decode)
+                    .consumerMainThread(ClientPayloadHandler::handleToggleLockPacket)
+                    .add();
 
-        registrar.playToServer(ToggleSubscriptionPacketC2S.TYPE,
-                ToggleSubscriptionPacketC2S.STREAM_CODEC, ClientPayloadHandler::handleToggleSubscriptionPacket);
+            CHANNEL.messageBuilder(ToggleSubscriptionPacketC2S.class, id++)
+                    .encoder(ToggleSubscriptionPacketC2S::encode)
+                    .decoder(ToggleSubscriptionPacketC2S::decode)
+                    .consumerMainThread(ClientPayloadHandler::handleToggleSubscriptionPacket)
+                    .add();
+        });
     }
 }

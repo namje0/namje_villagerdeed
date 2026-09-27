@@ -5,7 +5,9 @@
       "conditions": {
         "items": [
           {
-            "items": "minecraft:book"
+            "items": [
+              "minecraft:book"
+            ]
           }
         ]
       },
@@ -15,7 +17,9 @@
       "conditions": {
         "items": [
           {
-            "items": "minecraft:emerald"
+            "items": [
+              "minecraft:emerald"
+            ]
           }
         ]
       },
@@ -25,7 +29,9 @@
       "conditions": {
         "items": [
           {
-            "items": "minecraft:gold_ingot"
+            "items": [
+              "minecraft:gold_ingot"
+            ]
           }
         ]
       },
@@ -40,15 +46,16 @@
   },
   "requirements": [
     [
-      "has_the_recipe",
       "has_emerald",
       "has_gold_ingot",
-      "has_book"
+      "has_book",
+      "has_the_recipe"
     ]
   ],
   "rewards": {
     "recipes": [
       "villagerdeed:villagerdeed"
     ]
-  }
+  },
+  "sends_telemetry_event": false
 }

@@ -1,45 +1,28 @@
 package com.namje.villagerdeed.datagen;
 
 import com.namje.villagerdeed.block.ModBlocks;
-import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
+import net.minecraft.data.recipes.FinishedRecipe;
 import net.minecraft.data.recipes.RecipeCategory;
-import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.RecipeProvider;
+import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Items;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 public class ModRecipeProvider extends RecipeProvider {
-    public ModRecipeProvider(HolderLookup.Provider registries, RecipeOutput output) {
-        super(registries, output);
-    }
-
-    public static class Runner extends RecipeProvider.Runner {
-
-        public Runner(PackOutput packOutput, CompletableFuture<HolderLookup.Provider> registries) {
-            super(packOutput, registries);
-        }
-
-        @Override
-        protected RecipeProvider createRecipeProvider(HolderLookup.Provider registries, RecipeOutput output) {
-            return new ModRecipeProvider(registries, output);
-        }
-
-        @Override
-        public String getName() {
-            return "villagerdeed_recipes";
-        }
+    public ModRecipeProvider(PackOutput output) {
+        super(output);
     }
 
     @Override
-    protected void buildRecipes() {
-        shaped(RecipeCategory.DECORATIONS, ModBlocks.VILLAGERDEED_BLOCK.get())
+    protected void buildRecipes(Consumer<FinishedRecipe> output) {
+        ShapedRecipeBuilder.shaped(RecipeCategory.DECORATIONS, ModBlocks.VILLAGERDEED_BLOCK.get())
                 .pattern("ADA")
                 .pattern("ABA")
                 .pattern("ACA")
-                .define('A', tag(ItemTags.PLANKS))
+                .define('A', ItemTags.PLANKS)
                 .define('B', Items.BOOK)
                 .define('C', Items.EMERALD)
                 .define('D', Items.GOLD_INGOT)

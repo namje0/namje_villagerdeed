@@ -1,25 +1,20 @@
 package com.namje.villagerdeed.menu.custom;
 
-import com.mojang.blaze3d.platform.cursor.CursorTypes;
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
-import com.namje.villagerdeed.networking.packet.EvictTenantPacketC2S;
+import com.namje.villagerdeed.event.ModEvents;
 import com.namje.villagerdeed.networking.packet.SwapTenantProfessionPacketC2S;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.InputWithModifiers;
-import net.minecraft.client.input.MouseButtonEvent;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
-import net.minecraft.world.entity.npc.villager.VillagerProfession;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
+import net.minecraft.world.entity.npc.VillagerProfession;
 
 import java.util.Arrays;
 import java.util.List;
@@ -27,11 +22,8 @@ import java.util.Locale;
 import java.util.stream.Collectors;
 
 public class SwapProfessionScreen extends Screen {
-    private static final Identifier GUI_TEXTURE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "textures/gui/villagerdeed/swap_profession_gui.png");
-
-    private static final Identifier SCROLLER_SPRITE = Identifier.withDefaultNamespace("container/villager/scroller");
-    private static final Identifier SCROLLER_DISABLED_SPRITE = Identifier.withDefaultNamespace("container/villager/scroller_disabled");
+    private static final ResourceLocation GUI_TEXTURE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/villagerdeed/swap_profession_gui.png");
 
     private static final int VISIBLE_BUTTONS = 7;
     private static final int TRADE_BUTTON_HEIGHT = 20;
@@ -60,11 +52,6 @@ public class SwapProfessionScreen extends Screen {
     }
 
     @Override
-    public boolean isInGameUi() {
-        return true;
-    }
-
-    @Override
     public boolean isPauseScreen() {
         return false;
     }
@@ -84,14 +71,6 @@ public class SwapProfessionScreen extends Screen {
         }
 
         this.updateButtonStates();
-    }
-
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        super.extractRenderState(graphics, mouseX, mouseY, a);
-        int x = (this.width - this.imageWidth) / 2;
-        int y = (this.height - this.imageHeight) / 2;
-        graphics.text(this.font, Component.translatable("gui.villagerdeed.profession"), x + 8, y + 7, 0xFF404040, false);
     }
 
     private void updateButtonStates() {
@@ -120,7 +99,7 @@ public class SwapProfessionScreen extends Screen {
     }
 
     private Component getProfessionLabel(VillagerProfession profession) {
-        Identifier key = BuiltInRegistries.VILLAGER_PROFESSION.getKey(profession);
+        ResourceLocation key = BuiltInRegistries.VILLAGER_PROFESSION.getKey(profession);
 
         String namespace = key.getNamespace();
         String path = key.getPath();
@@ -150,44 +129,48 @@ public class SwapProfessionScreen extends Screen {
         return this.professions.size() > VISIBLE_BUTTONS;
     }
 
-    private void extractScroller(GuiGraphicsExtractor graphics, int xo, int yo, int mouseX, int mouseY) {
+    private void renderScroller(GuiGraphics graphics, int xo, int yo, int mouseX, int mouseY) {
         int maxScrollOff = this.professions.size() - VISIBLE_BUTTONS;
+
+        int scrollerX = xo + SCROLL_BAR_START_X;
+        int scrollerY;
+        int color;
 
         if (maxScrollOff > 0) {
             int trackHeight = SCROLL_BAR_HEIGHT - SCROLLER_HEIGHT;
             int scrollerYOff = (int) ((float) trackHeight * (float) this.scrollOff / (float) maxScrollOff);
 
-            int scrollerX = xo + SCROLL_BAR_START_X;
-            int scrollerY = yo + SCROLL_BAR_TOP_POS_Y + scrollerYOff;
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_SPRITE, scrollerX, scrollerY, SCROLLER_WIDTH, SCROLLER_HEIGHT);
-
-            if (mouseX >= scrollerX && mouseX < scrollerX + SCROLLER_WIDTH && mouseY >= scrollerY && mouseY <= scrollerY + SCROLLER_HEIGHT) {
-                graphics.requestCursor(this.isDragging ? CursorTypes.RESIZE_NS : CursorTypes.POINTING_HAND);
-            }
+            scrollerY = yo + SCROLL_BAR_TOP_POS_Y + scrollerYOff;
+            color = 0xFFC6C6C6;
         } else {
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, SCROLLER_DISABLED_SPRITE,
-                    xo + SCROLL_BAR_START_X, yo + SCROLL_BAR_TOP_POS_Y, SCROLLER_WIDTH, SCROLLER_HEIGHT);
+            scrollerY = yo + SCROLL_BAR_TOP_POS_Y;
+            color = 0xFF8B8B8B;
         }
+
+        graphics.fill(scrollerX, scrollerY, scrollerX + SCROLLER_WIDTH, scrollerY + SCROLLER_HEIGHT, color);
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        super.extractBackground(graphics, mouseX, mouseY, a);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float a) {
+        this.renderBackground(graphics);
         int xo = (this.width - this.imageWidth) / 2;
         int yo = (this.height - this.imageHeight) / 2;
 
-        graphics.blit(RenderPipelines.GUI_TEXTURED, GUI_TEXTURE, xo, yo, 0.0F, 0.0F, this.imageWidth,
-                this.imageHeight, 256, 256);
+        graphics.blit(GUI_TEXTURE, xo, yo, 0, 0, this.imageWidth, this.imageHeight);
 
-        this.extractScroller(graphics, xo, yo, mouseX, mouseY);
+        this.renderScroller(graphics, xo, yo, mouseX, mouseY);
+
+        super.render(graphics, mouseX, mouseY, a);
+
+        graphics.drawString(this.font, Component.translatable("gui.villagerdeed.profession"), xo + 8, yo + 7, 0xFF404040, false);
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double scrollX, double scrollY) {
-        if (!super.mouseScrolled(x, y, scrollX, scrollY)) {
+    public boolean mouseScrolled(double x, double y, double delta) {
+        if (!super.mouseScrolled(x, y, delta)) {
             if (this.canScroll()) {
                 int maxScrollOff = this.professions.size() - VISIBLE_BUTTONS;
-                this.scrollOff = Mth.clamp((int) ((double) this.scrollOff - scrollY), 0, maxScrollOff);
+                this.scrollOff = Mth.clamp((int) ((double) this.scrollOff - delta), 0, maxScrollOff);
                 this.updateButtonStates();
             }
         }
@@ -195,41 +178,41 @@ public class SwapProfessionScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
         int xo = (this.width - this.imageWidth) / 2;
         int yo = (this.height - this.imageHeight) / 2;
-        if (this.canScroll() && event.x() > (double) (xo + SCROLL_BAR_START_X)
-                && event.x() < (double) (xo + SCROLL_BAR_START_X + SCROLLER_WIDTH)
-                && event.y() > (double) (yo + SCROLL_BAR_TOP_POS_Y)
-                && event.y() <= (double) (yo + SCROLL_BAR_TOP_POS_Y + SCROLL_BAR_HEIGHT + 1)) {
+        if (this.canScroll() && mouseX > (double) (xo + SCROLL_BAR_START_X)
+                && mouseX < (double) (xo + SCROLL_BAR_START_X + SCROLLER_WIDTH)
+                && mouseY > (double) (yo + SCROLL_BAR_TOP_POS_Y)
+                && mouseY <= (double) (yo + SCROLL_BAR_TOP_POS_Y + SCROLL_BAR_HEIGHT + 1)) {
             this.isDragging = true;
-            this.mouseDragged(event, 0, 0);
+            this.mouseDragged(mouseX, mouseY, button, 0, 0);
         }
 
-        return super.mouseClicked(event, doubleClick);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
         if (this.isDragging) {
             int numberOfItems = this.professions.size();
             int fullScrollTopPos = (this.height - this.imageHeight) / 2 + SCROLL_BAR_TOP_POS_Y;
             int fullScrollBottomPos = fullScrollTopPos + SCROLL_BAR_HEIGHT;
             int maxScrollOff = numberOfItems - VISIBLE_BUTTONS;
-            float scrolling = ((float) event.y() - (float) fullScrollTopPos - 13.5F) / ((float) (fullScrollBottomPos - fullScrollTopPos) - 27.0F);
+            float scrolling = ((float) mouseY - (float) fullScrollTopPos - 13.5F) / ((float) (fullScrollBottomPos - fullScrollTopPos) - 27.0F);
             scrolling = scrolling * (float) maxScrollOff + 0.5F;
             this.scrollOff = Mth.clamp((int) scrolling, 0, maxScrollOff);
             this.updateButtonStates();
             return true;
         } else {
-            return super.mouseDragged(event, dx, dy);
+            return super.mouseDragged(mouseX, mouseY, button, dx, dy);
         }
     }
 
     @Override
-    public boolean mouseReleased(MouseButtonEvent event) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         this.isDragging = false;
-        return super.mouseReleased(event);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     private class ProfessionButton extends Button {
@@ -251,29 +234,21 @@ public class SwapProfessionScreen extends Screen {
         }
 
         @Override
-        public void onPress(InputWithModifiers input) {
+        public void onPress() {
             int clickedDataIndex = this.slotIndex + SwapProfessionScreen.this.scrollOff;
             if (clickedDataIndex < SwapProfessionScreen.this.professions.size()) {
                 VillagerProfession profession = SwapProfessionScreen.this.professions.get(clickedDataIndex);
 
-                ClientPacketDistributor.sendToServer(new SwapTenantProfessionPacketC2S(SwapProfessionScreen.this.blockEntity.getBlockPos(), profession));
+                ModEvents.CHANNEL.sendToServer(new SwapTenantProfessionPacketC2S(SwapProfessionScreen.this.blockEntity.getBlockPos(), profession));
 
                 SwapProfessionScreen.this.onClose();
             }
-        }
-
-        @Override
-        protected void extractContents(GuiGraphicsExtractor guiGraphicsExtractor, int i, int i1, float v) {
-            this.extractDefaultSprite(guiGraphicsExtractor);
-            this.extractDefaultLabel(guiGraphicsExtractor.textRendererForWidget(this, GuiGraphicsExtractor.HoveredTextEffects.NONE));
         }
     }
 
     private static List<VillagerProfession> getProfessions() {
         return BuiltInRegistries.VILLAGER_PROFESSION.stream()
-                .filter(profession -> BuiltInRegistries.VILLAGER_PROFESSION.getResourceKey(profession)
-                        .map(key -> !key.equals(VillagerProfession.NONE))
-                        .orElse(true))
+                .filter(profession -> profession != VillagerProfession.NONE)
                 .toList();
     }
 }

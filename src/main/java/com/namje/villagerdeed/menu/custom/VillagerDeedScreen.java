@@ -2,29 +2,23 @@ package com.namje.villagerdeed.menu.custom;
 
 import com.namje.villagerdeed.VillagerDeed;
 import com.namje.villagerdeed.block.entity.custom.VillagerDeedBlockEntity;
+import com.namje.villagerdeed.event.ModEvents;
 import com.namje.villagerdeed.networking.packet.*;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.input.InputWithModifiers;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
-import net.minecraft.client.renderer.entity.VillagerRenderer;
-import net.minecraft.client.renderer.entity.state.VillagerRenderState;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
-import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.Level;
-import net.neoforged.neoforge.client.network.ClientPacketDistributor;
 import org.joml.Quaternionf;
-import org.joml.Quaternionfc;
-import org.joml.Vector3f;
-import org.joml.Vector3fc;
 
 import java.util.*;
 
@@ -36,57 +30,55 @@ public class VillagerDeedScreen extends Screen {
     private String cachedDeedName = null;
     private String cachedTenantName = null;
 
-    private static final Vector3fc VILLAGER_TRANSLATION = new Vector3f(0.0F, 1.0F, 0.0F);
-    private static final Quaternionfc VILLAGER_ANGLE = new Quaternionf().rotationXYZ(0.2F, 0.0F, (float) Math.PI);
-    private static final float VILLAGER_SCALE = 24.0F;
+    private static final int VILLAGER_SCALE = 24;
 
-    private static final Identifier GUI_TEXTURE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "textures/gui/villagerdeed/deed_gui.png");
+    private static final ResourceLocation GUI_TEXTURE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/villagerdeed/deed_gui.png");
 
-    private static final Identifier BUTTON_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/button");
-    private static final Identifier BUTTON_HIGHLIGHTED_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/button_highlighted");
-    private static final Identifier BUTTON_DISABLED_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/button_disabled");
+    private static final ResourceLocation BUTTON_SPRITE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/button.png");
+    private static final ResourceLocation BUTTON_HIGHLIGHTED_SPRITE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/button_highlighted.png");
+    private static final ResourceLocation BUTTON_DISABLED_SPRITE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/button_disabled.png");
 
-    private static final Identifier EVICT_ICON_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/evicttenantbutton");
-    private static final Identifier SUMMON_ICON_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/summontenantbutton");
-    private static final Identifier SWAP_PROFESSION_ICON_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/swapprofessionsbutton");
-    private static final Identifier EDIT_ICON_SPRITE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/writebutton");
+    private static final ResourceLocation EVICT_ICON_SPRITE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/evicttenantbutton.png");
+    private static final ResourceLocation SUMMON_ICON_SPRITE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/summontenantbutton.png");
+    private static final ResourceLocation SWAP_PROFESSION_ICON_SPRITE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/swapprofessionsbutton.png");
+    private static final ResourceLocation EDIT_ICON_SPRITE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/writebutton.png");
 
-    private static final Identifier TOGGLE_DEED_TEXTURE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton");
-    private static final Identifier TOGGLE_DEED_TEXTURE_HIGHLIGHT =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_highlighted");
-    private static final Identifier TOGGLE_DEED_TEXTURE_OFF =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_off");
-    private static final Identifier TOGGLE_DEED_TEXTURE_OFF_HIGHLIGHT =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_off_highlighted");
-    private static final Identifier TOGGLE_DEED_DISABLED =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/toggledeedbutton_disabled");
-    private static final Identifier LOCK_TEXTURE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/lockbutton");
-    private static final Identifier LOCK_TEXTURE_HIGHLIGHT =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/lockbutton_highlighted");
-    private static final Identifier LOCK_TEXTURE_OFF =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/unlockbutton");
-    private static final Identifier LOCK_TEXTURE_OFF_HIGHLIGHT =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/unlockbutton_highlighted");
-    private static final Identifier LOCK_TEXTURE_DISABLED =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/lockbutton_disabled");
-    private static final Identifier LOCK_TEXTURE_OFF_DISABLED =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/unlockbutton_disabled");
-    private static final Identifier SUBSCRIBE_TEXTURE =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/subscribebutton_enabled");
-    private static final Identifier SUBSCRIBE_TEXTURE_OFF =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/subscribebutton");
-    private static final Identifier SUBSCRIBE_TEXTURE_HIGHLIGHT =
-            Identifier.fromNamespaceAndPath(VillagerDeed.MODID, "villagerdeed/subscribebutton_highlighted");
+    private static final ResourceLocation TOGGLE_DEED_TEXTURE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/toggledeedbutton.png");
+    private static final ResourceLocation TOGGLE_DEED_TEXTURE_HIGHLIGHT =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/toggledeedbutton_highlighted.png");
+    private static final ResourceLocation TOGGLE_DEED_TEXTURE_OFF =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/toggledeedbutton_off.png");
+    private static final ResourceLocation TOGGLE_DEED_TEXTURE_OFF_HIGHLIGHT =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/toggledeedbutton_off_highlighted.png");
+    private static final ResourceLocation TOGGLE_DEED_DISABLED =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/toggledeedbutton_disabled.png");
+    private static final ResourceLocation LOCK_TEXTURE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/lockbutton.png");
+    private static final ResourceLocation LOCK_TEXTURE_HIGHLIGHT =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/lockbutton_highlighted.png");
+    private static final ResourceLocation LOCK_TEXTURE_OFF =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/unlockbutton.png");
+    private static final ResourceLocation LOCK_TEXTURE_OFF_HIGHLIGHT =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/unlockbutton_highlighted.png");
+    private static final ResourceLocation LOCK_TEXTURE_DISABLED =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/lockbutton_disabled.png");
+    private static final ResourceLocation LOCK_TEXTURE_OFF_DISABLED =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/unlockbutton_disabled.png");
+    private static final ResourceLocation SUBSCRIBE_TEXTURE =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/subscribebutton_enabled.png");
+    private static final ResourceLocation SUBSCRIBE_TEXTURE_OFF =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/subscribebutton.png");
+    private static final ResourceLocation SUBSCRIBE_TEXTURE_HIGHLIGHT =
+            new ResourceLocation(VillagerDeed.MODID, "textures/gui/sprites/villagerdeed/subscribebutton_highlighted.png");
 
     private final int imageWidth = 176;
     private final int imageHeight = 113;
@@ -106,7 +98,6 @@ public class VillagerDeedScreen extends Screen {
     private ConfirmTenantNameButton confirmTenantNameButton;
 
     private final VillagerDeedBlockEntity blockEntity;
-    private final VillagerRenderState villagerRenderState = new VillagerRenderState();
 
     public VillagerDeedScreen(Component title, VillagerDeedBlockEntity blockEntity) {
         super(title);
@@ -149,11 +140,6 @@ public class VillagerDeedScreen extends Screen {
         this.addRenderableWidget(this.deedNameEdit);
 
         this.updateWidgetStates();
-    }
-
-    @Override
-    public boolean isInGameUi() {
-        return true;
     }
 
     @Override
@@ -253,64 +239,66 @@ public class VillagerDeedScreen extends Screen {
         }
     }
 
-    private void updateVillagerStateFromEntity(Villager villager, float partialTick, int mouseX, int mouseY, int guiLeft, int guiTop) {
-        EntityRenderDispatcher dispatcher = Minecraft.getInstance().getEntityRenderDispatcher();
-        if (dispatcher.getRenderer(villager) instanceof VillagerRenderer renderer) {
-            renderer.extractRenderState(villager, this.villagerRenderState, partialTick);
+    private void renderVillagerPreview(GuiGraphics graphics, Villager villager, int mouseX, int mouseY, int guiLeft, int guiTop) {
+        int x0 = guiLeft + 8;
+        int y0 = guiTop + 24;
+        int x1 = guiLeft + 59;
+        int y1 = guiTop + 75;
 
-            float entityCenterX = guiLeft + 30.0F;
-            float entityCenterY = guiTop + 35.0F;
+        float entityCenterX = guiLeft + 30.0F;
+        float entityCenterY = guiTop + 35.0F;
 
-            float deltaX = entityCenterX - mouseX;
-            float deltaY = entityCenterY - mouseY;
+        float deltaX = entityCenterX - mouseX;
+        float deltaY = entityCenterY - mouseY;
 
-            float yawOffset = (float) Math.atan(deltaX / 40.0F) * 20.0F;
-            float pitchOffset = (float) Math.atan(deltaY / 40.0F) * 20.0F;
+        float yawOffset = (float) Math.atan(deltaX / 40.0F) * 20.0F;
+        float pitchOffset = (float) Math.atan(deltaY / 40.0F) * 20.0F;
 
-            this.villagerRenderState.bodyRot = 200.0F;
+        float yRot = Mth.clamp(yawOffset, -45.0F, 45.0F);
+        float xRot = Mth.clamp(-pitchOffset, -30.0F, 30.0F);
 
-            this.villagerRenderState.yRot = Math.clamp(yawOffset, -45.0F, 45.0F);
-            this.villagerRenderState.xRot = Math.clamp(-pitchOffset, -30.0F, 30.0F);
-        }
+        float bodyRotO = villager.yBodyRot;
+        float yRotO = villager.getYRot();
+        float xRotO = villager.getXRot();
+        float headRotO = villager.yHeadRotO;
+        float headRot = villager.yHeadRot;
+
+        villager.yBodyRot = 200.0F;
+        villager.setYRot(yRot);
+        villager.setXRot(xRot);
+        villager.yHeadRot = villager.getYRot();
+        villager.yHeadRotO = villager.getYRot();
+
+        Quaternionf pose = new Quaternionf().rotationXYZ(0.2F, 0.0F, (float) Math.PI);
+
+        graphics.enableScissor(x0, y0, x1, y1);
+        InventoryScreen.renderEntityInInventory(graphics, guiLeft + 33, y1, VILLAGER_SCALE, pose, null, villager);
+        graphics.disableScissor();
+
+        villager.yBodyRot = bodyRotO;
+        villager.setYRot(yRotO);
+        villager.setXRot(xRotO);
+        villager.yHeadRotO = headRotO;
+        villager.yHeadRot = headRot;
     }
 
     @Override
-    public void extractBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        super.extractBackground(graphics, mouseX, mouseY, a);
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float a) {
+        this.renderBackground(graphics);
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
 
-        graphics.blit(RenderPipelines.GUI_TEXTURED, GUI_TEXTURE, x, y, 0, 0, this.imageWidth,
-                this.imageHeight, 256, 256);
+        graphics.blit(GUI_TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
 
         if (this.blockEntity.getDeedState() == 2) {
             Level level = this.minecraft.level;
             Villager tenant = (level != null) ? this.blockEntity.getTenantEntity(level) : null;
             if (tenant != null) {
-                this.updateVillagerStateFromEntity(tenant, a, mouseX, mouseY, x, y);
-
-                int x0 = x + 8;
-                int y0 = y + 24;
-                int x1 = x + 59;
-                int y1 = y + 75;
-
-                graphics.entity(
-                        this.villagerRenderState,
-                        VILLAGER_SCALE,
-                        VILLAGER_TRANSLATION,
-                        VILLAGER_ANGLE,
-                        null,
-                        x0, y0, x1, y1
-                );
+                this.renderVillagerPreview(graphics, tenant, mouseX, mouseY, x, y);
             }
         }
-    }
 
-    @Override
-    public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        super.extractRenderState(graphics, mouseX, mouseY, a);
-        int x = (this.width - this.imageWidth) / 2;
-        int y = (this.height - this.imageHeight) / 2;
+        super.render(graphics, mouseX, mouseY, a);
 
         int currentState = this.blockEntity.getDeedState();
 
@@ -348,22 +336,22 @@ public class VillagerDeedScreen extends Screen {
         for (int i = 0; i < linesToDraw; i++) {
             FormattedCharSequence line = this.cachedStateLines.get(i);
             int lineY = y + 42 + (i * this.font.lineHeight);
-            graphics.text(this.font, line, x + 63, lineY, 0xFF404040, false);
+            graphics.drawString(this.font, line, x + 63, lineY, 0xFF404040, false);
         }
     }
 
     private abstract static class DeedIconButton extends AbstractButton {
-        private final Identifier iconSprite;
+        private final ResourceLocation iconSprite;
 
-        protected DeedIconButton(int x, int y, int width, int height, Identifier iconSprite, Component label) {
+        protected DeedIconButton(int x, int y, int width, int height, ResourceLocation iconSprite, Component label) {
             super(x, y, width, height, label);
             this.setTooltip(Tooltip.create(label));
             this.iconSprite = iconSprite;
         }
 
         @Override
-        public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-            Identifier sprite;
+        public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float a) {
+            ResourceLocation sprite;
             if (!this.active) {
                 sprite = BUTTON_DISABLED_SPRITE;
             } else if (this.isHovered()) {
@@ -372,12 +360,12 @@ public class VillagerDeedScreen extends Screen {
                 sprite = BUTTON_SPRITE;
             }
 
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, sprite, this.getX(), this.getY(), this.width, this.height);
-            this.extractIcon(graphics);
+            graphics.blit(sprite, this.getX(), this.getY(), 0, 0, this.width, this.height, this.width, this.height);
+            this.renderIcon(graphics);
         }
 
-        protected void extractIcon(GuiGraphicsExtractor graphics) {
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.iconSprite, this.getX(), this.getY(), this.width, this.height);
+        protected void renderIcon(GuiGraphics graphics) {
+            graphics.blit(this.iconSprite, this.getX(), this.getY(), 0, 0, this.width, this.height, this.width, this.height);
         }
 
         @Override
@@ -392,7 +380,7 @@ public class VillagerDeedScreen extends Screen {
             this.setTooltip(Tooltip.create(this.getMessage()));
         }
 
-        private Identifier getSprite() {
+        private ResourceLocation getSprite() {
             boolean isDisabled = VillagerDeedScreen.this.blockEntity.getDeedState() == 4;
             boolean hovered = this.active && this.isHovered();
 
@@ -406,13 +394,13 @@ public class VillagerDeedScreen extends Screen {
         }
 
         @Override
-        public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getSprite(), this.getX(), this.getY(), this.width, this.height);
+        public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float a) {
+            graphics.blit(this.getSprite(), this.getX(), this.getY(), 0, 0, this.width, this.height, this.width, this.height);
         }
 
         @Override
-        public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new ToggleDeedPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
+        public void onPress() {
+            ModEvents.CHANNEL.sendToServer(new ToggleDeedPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
 
         @Override
@@ -427,7 +415,7 @@ public class VillagerDeedScreen extends Screen {
             this.setTooltip(Tooltip.create(this.getMessage()));
         }
 
-        private Identifier getSprite() {
+        private ResourceLocation getSprite() {
             boolean isLocked = VillagerDeedScreen.this.blockEntity.getLocked();
             boolean hovered = this.active && this.isHovered();
 
@@ -441,13 +429,13 @@ public class VillagerDeedScreen extends Screen {
         }
 
         @Override
-        public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getSprite(), this.getX(), this.getY(), this.width, this.height);
+        public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float a) {
+            graphics.blit(this.getSprite(), this.getX(), this.getY(), 0, 0, this.width, this.height, this.width, this.height);
         }
 
         @Override
-        public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new ToggleLockPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
+        public void onPress() {
+            ModEvents.CHANNEL.sendToServer(new ToggleLockPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
 
         @Override
@@ -462,7 +450,7 @@ public class VillagerDeedScreen extends Screen {
             this.setTooltip(Tooltip.create(this.getMessage()));
         }
 
-        private Identifier getSprite() {
+        private ResourceLocation getSprite() {
             UUID playerUUID = (Minecraft.getInstance().player != null) ? Minecraft.getInstance().player.getUUID() : null;
             boolean isSubscribed = playerUUID != null && VillagerDeedScreen.this.blockEntity.playerIsSubscribed(playerUUID);
             boolean hovered = this.active && this.isHovered();
@@ -474,13 +462,13 @@ public class VillagerDeedScreen extends Screen {
         }
 
         @Override
-        public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-            graphics.blitSprite(RenderPipelines.GUI_TEXTURED, this.getSprite(), this.getX(), this.getY(), this.width, this.height);
+        public void renderWidget(GuiGraphics graphics, int mouseX, int mouseY, float a) {
+            graphics.blit(this.getSprite(), this.getX(), this.getY(), 0, 0, this.width, this.height, this.width, this.height);
         }
 
         @Override
-        public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new ToggleSubscriptionPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
+        public void onPress() {
+            ModEvents.CHANNEL.sendToServer(new ToggleSubscriptionPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
 
         @Override
@@ -495,8 +483,8 @@ public class VillagerDeedScreen extends Screen {
         }
 
         @Override
-        public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new EvictTenantPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
+        public void onPress() {
+            ModEvents.CHANNEL.sendToServer(new EvictTenantPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
     }
 
@@ -506,8 +494,8 @@ public class VillagerDeedScreen extends Screen {
         }
 
         @Override
-        public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new SummonTenantPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
+        public void onPress() {
+            ModEvents.CHANNEL.sendToServer(new SummonTenantPacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos()));
         }
     }
 
@@ -517,8 +505,8 @@ public class VillagerDeedScreen extends Screen {
         }
 
         @Override
-        public void onPress(InputWithModifiers input) {
-            Minecraft.getInstance().setScreenAndShow(new SwapProfessionScreen(Component.translatable("block.villagerdeed.namje_villagerdeed"), VillagerDeedScreen.this.blockEntity));
+        public void onPress() {
+            Minecraft.getInstance().setScreen(new SwapProfessionScreen(Component.translatable("block.villagerdeed.namje_villagerdeed"), VillagerDeedScreen.this.blockEntity));
         }
     }
 
@@ -528,8 +516,8 @@ public class VillagerDeedScreen extends Screen {
         }
 
         @Override
-        public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new ChangeDeedNamePacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos(), deedNameEdit.getValue()));
+        public void onPress() {
+            ModEvents.CHANNEL.sendToServer(new ChangeDeedNamePacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos(), deedNameEdit.getValue()));
         }
     }
 
@@ -539,8 +527,8 @@ public class VillagerDeedScreen extends Screen {
         }
 
         @Override
-        public void onPress(InputWithModifiers input) {
-            ClientPacketDistributor.sendToServer(new ChangeTenantNamePacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos(), tenantNameEdit.getValue()));
+        public void onPress() {
+            ModEvents.CHANNEL.sendToServer(new ChangeTenantNamePacketC2S(VillagerDeedScreen.this.blockEntity.getBlockPos(), tenantNameEdit.getValue()));
         }
     }
 }
